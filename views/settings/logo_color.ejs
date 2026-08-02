@@ -1,0 +1,62 @@
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin/dashboard">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Logo & Theme Color Settings</li>
+    </ol>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <h5>Logo & Theme Color Settings</h5>
+      </div>
+
+     
+      
+        <form id="logoColorForm" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="card-body">
+                <div class="mb-3">
+                <label class="form-label">Website Logo</label>
+                <input type="file" name="logo" class="form-control">
+                <% if(setting?.logo){ %>
+                    <!-- <img src="/uploads/<%= setting.logo %>" height="60" class="mt-2"> -->
+                     <img src="<%= setting?.logo ? '/upload/' + setting.logo : '/assets/default-logo.png' %>" style="height: 100px;">
+
+                <% } %>
+                </div>
+
+                <div class="mb-3">
+                <label class="form-label">Primary Color</label>
+                <input type="color" class="form-control" name="primary_color"
+                    value="<%= setting?.primary_color || '#0d6efd' %>">
+                </div>
+
+                <div class="mb-3">
+                <label class="form-label">Secondary Color</label>
+                <input type="color" class="form-control" name="secondary_color"
+                    value="<%= setting?.secondary_color || '#6c757d' %>">
+                </div>
+            </div>
+
+            <div class="card-footer text-end">
+                <button type="submit" id="saveSettingBtn" class="btn btn-primary">
+                Save Settings
+                </button>
+            </div>
+        </form>
+
+
+
+
+    </div>
+  </div>
+</div>

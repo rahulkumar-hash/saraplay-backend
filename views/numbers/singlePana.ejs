@@ -1,0 +1,48 @@
+<style>
+.digit_num_box{
+  border:1px solid #34c38f;
+  border-radius:4px;
+  background-color:rgba(52,195,143,.18);
+  width:45px;
+  height:45px;
+  margin:10px 20px;
+  font-weight:600;
+}
+.ank_box{
+  border:1px solid #f46a6a;
+  border-radius:4px;
+  background-color:rgba(244,106,106,.18);
+  width:45px;
+  height:45px;
+  margin:10px 20px;
+  font-weight:600;
+}
+</style>
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <div class="pull-left">
+      <div class="page-title">Single Pana Number</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h4 class="card-title">Single Pana Numbers</h4>
+
+    <% Object.keys(panaData).forEach(ank => { %>
+
+      <h5>Single Ank</h5>
+      <button class="ank_box"><%= ank %></button>
+
+      <div>
+        <% panaData[ank].forEach(num => { %>
+          <button class="digit_num_box"><%= num %></button>
+        <% }) %>
+      </div>
+
+    <% }) %>
+
+  </div>
+</div>

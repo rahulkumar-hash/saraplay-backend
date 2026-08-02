@@ -1,0 +1,80 @@
+
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Bid History</li>
+    </ol>
+  </div>
+</div>
+
+
+
+
+<!-- FILTER -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h4 class="card-title">Bid History Report</h4>
+
+    <form id="starlineBidFilterForm">
+      <div class="row">
+
+        <div class="col-md-2">
+          <label>Date</label>
+          <input type="date" name="result_date" id="filter_date" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label>Game Name</label>
+          <select name="game" id="filter_game" class="form-control"></select>
+        </div>
+
+        <div class="col-md-4">
+          <label>Game Type</label>
+          <select name="game_type" id="filter_type" class="form-control">
+            <option value="">-Select Game Type-</option>
+            <option value="all">All Type</option>
+            <option value="Single Digit">Single Digit</option>
+            <option value="Single Pana">Single Pana</option>
+            <option value="Double Pana">Double Pana</option>
+            <option value="Triple Pana">Triple Pana</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 mt-4">
+          <button class="btn btn-primary w-100">
+            Submit
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+  <div class="card-body">
+    <table class="table table-bordered w-100" id="bidTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>User Mobile</th>
+          <th>Bid TXN ID</th>
+          <th>Game Name</th>
+          <th>Game Type</th>
+          <th>Digit</th>
+          <th>Pana</th>
+          <th>Points</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>

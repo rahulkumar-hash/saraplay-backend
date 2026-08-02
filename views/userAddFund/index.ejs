@@ -1,0 +1,94 @@
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+        <div class="pull-left">
+            <div class="page-title">User Add Fund</div>
+        </div>
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a href="/admin/dashboard">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">User Add Fund</li>
+        </ol>
+    </div>
+</div>
+
+<div class="row">
+<div class="col-sm-12">
+<div class="card">
+<div class="card-body">
+
+<h4 class="card-title">Add Balance In User Wallet</h4>
+
+<form id="addFundForm">
+<div class="form-group">
+    <label>User List</label>
+    <select class="form-control" id="user_id">
+        <option selected disabled>Select User</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <label>Amount</label>
+    <input class="form-control" type="number" min="1" id="amount" placeholder="Enter Amount">
+</div>
+
+<button type="submit" class="btn btn-primary px-5 radius-30">
+    Submit <i class="fa fa-spinner fa-spin d-none" id="loader"></i>
+</button>
+
+<div id="error" class="mt-2"></div>
+</form>
+
+</div>
+</div>
+</div>
+</div>
+
+<script>
+    $(document).ready(function () {
+
+    loadUsers();
+
+    $('#addFundForm').submit(function (e) {
+        e.preventDefault();
+
+        $('#loader').removeClass('d-none');
+
+        $.post('/admin/user-add-fund/submit', {
+            user_id: $('#user_id').val(),
+            amount: $('#amount').val()
+        }, function (res) {
+
+            $('#loader').addClass('d-none');
+
+            if (res.res === 'success') {
+                Swal.fire(res.msg);
+                $('#addFundForm')[0].reset();
+            } else {
+                $('#error').html(`<span class="text-danger">${res.msg}</span>`);
+            }
+        });
+    });
+});
+
+/* ======================
+   LOAD USER LIST
+====================== */
+function loadUsers() {
+    $.post('/admin/user-add-fund/users', {}, function (res) {
+
+        let html = '<option disabled selected>Select User</option>';
+
+        if (res.status) {
+            res.data.forEach(u => {
+                html += `<option value="${u.id}">${u.name} (${u.mobile})</option>`;
+            });
+        }
+
+        $('#user_id').html(html);
+    });
+}
+
+</script>

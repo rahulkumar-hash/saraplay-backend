@@ -1,0 +1,78 @@
+<!-- PAGE BAR -->
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+        
+
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin/dashboard">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">Fund Request History</li>
+        </ol>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+
+            <div class="card-head">
+                <header></header>
+            </div>
+
+            <div class="card-body">
+                <div class="table-scrollable">
+                    <table id="fundTable" class="table table-striped table-bordered w-100">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>User Name</th>
+                                <th>Amount</th>
+                                <th>Request No.</th>
+                                <th>Receipt Image</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script>
+let table;
+
+$(document).ready(function () {
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+
+    table = $('#fundTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "/admin/fund-request/data",
+            type: "POST",
+            headers: {
+                "X-CSRF-TOKEN": csrfToken
+            }
+        },
+        columns: [
+            { data: "no" },
+            { data: "username" },
+            { data: "amount" },
+            { data: "request_no" },
+            { data: "receipt_image" },
+            { data: "date" },
+            { data: "status" },
+            { data: "action" }
+        ]
+    });
+
+});
+</script>

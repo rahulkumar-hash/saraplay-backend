@@ -1,0 +1,160 @@
+
+
+<!-- PAGE BAR -->
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+      
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">Manage Games</li>
+        </ol>
+    </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-header">
+                <header>
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addGameModal">
+                    Add Game
+                </button>
+                </header>
+            </div>
+
+            <div class="card-body">
+                <table class="table table-bordered" id="gameTable">
+                    <thead>
+                        <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Hindi</th>
+                        <th>Closing Day</th>
+                        <th>Open</th>
+                        <th>Close</th>
+                        <th>Commission %</th>
+                        <th>Active</th>
+                        <th>Market</th>
+                        <th>Action</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD GAME MODAL -->
+<div class="modal fade"
+     id="addGameModal"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+
+      <div class="modal-header">
+        <h5>Add Game</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="addGameForm">
+            <input class="form-control mb-2" name="name" placeholder="Game Name">
+            <input class="form-control mb-2" name="hname" placeholder="Hindi Name">
+
+            <label>Open Time</label>
+            <input type="time" class="form-control mb-2" name="open_time">
+
+            <label>Close Time</label>
+            <input type="time" class="form-control mb-2" name="close_time">
+
+            <label>Closing Days</label>
+            <select name="closing_day[]" multiple class="form-control js-days">
+                <option>sunday</option>
+                <option>monday</option>
+                <option>tuesday</option>
+                <option>wednesday</option>
+                <option>thursday</option>
+                <option>friday</option>
+                <option>saturday</option>
+            </select>
+
+
+            <input type="number" class="form-control mt-2" name="commission" placeholder="Commission %">
+
+            <button type="submit" id="addGameBtn" class="btn btn-primary mt-3">
+                Submit
+            </button>
+        </form>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- EDIT GAME MODAL -->
+<div class="modal fade"
+     id="editGameModal"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Edit Game</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editGameForm">
+
+          <input type="hidden" name="id" id="edit_id">
+
+          <input class="form-control mb-2" name="name" id="edit_name" placeholder="Game Name">
+          <input class="form-control mb-2" name="hname" id="edit_hname" placeholder="Hindi Name">
+
+          <label>Open Time</label>
+          <input type="time" class="form-control mb-2" name="open_time" id="edit_open_time">
+
+          <label>Close Time</label>
+          <input type="time" class="form-control mb-2" name="close_time" id="edit_close_time">
+
+          <label>Closing Days</label>
+          <select name="closing_day[]" multiple
+                  class="form-control js-edit-days" id="edit_closing_day">
+            <option>sunday</option>
+            <option>monday</option>
+            <option>tuesday</option>
+            <option>wednesday</option>
+            <option>thursday</option>
+            <option>friday</option>
+            <option>saturday</option>
+          </select>
+
+          <input type="number" class="form-control mt-2"
+                 name="commission" id="edit_commission"
+                 placeholder="Commission %">
+
+          <button type="submit" id="editGameBtn"
+                  class="btn btn-primary mt-3">
+            Update
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+

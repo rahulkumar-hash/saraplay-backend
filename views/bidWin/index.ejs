@@ -1,0 +1,103 @@
+                <!-- PAGE BAR -->
+                <div class="page-bar">
+                    <div class="page-title-breadcrumb">
+                        
+                        <ol class="breadcrumb page-breadcrumb pull-right">
+                            <li>
+                                <i class="fa fa-home"></i>
+                                <a class="parent-item" href="/admin">Home</a>
+                                <i class="fa fa-angle-right"></i>
+                            </li>
+                            <li class="active">Win Bid Report</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- FILTER -->
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">Win Bid Report</h4>
+
+                                <div class="row">
+                                    <div class="form-group col-md-4">
+                                        <label>Date</label>
+                                        <input type="date" id="SubmitDate" class="form-control digits">
+                                    </div>
+
+                                    <div class="form-group col-md-5">
+                                        <label>Game Name</label>
+                                        <select id="game_id" class="form-control">
+                                            <option selected disabled>-Select Game Name-</option>
+                                        </select>
+                                        
+                                    </div>
+
+                                    <div class="form-group col-md-3">
+                                        <label>&nbsp;</label>
+                                        <button type="button" id="submit" class="btn btn-primary btn-block mt-4">
+                                            Submit
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="error" style="display:none;">
+                                    <div class="alert alert-danger">
+                                        Please Select Game!
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESULT -->
+                <div class="row">
+                    <div class="col-md-12" id="dr"></div>
+                </div>
+
+            
+<script>
+$(document).ready(function () {
+
+    const now = new Date();
+    const day = ("0"+now.getDate()).slice(-2);
+    const month = ("0"+(now.getMonth()+1)).slice(-2);
+    const today = now.getFullYear()+"-"+month+"-"+day;
+
+    $('#SubmitDate').val(today).attr("max",today);
+
+    loadGames();
+
+    $('#submit').on('click', function () {
+        const date = $('#SubmitDate').val();
+        const game_id = $('#game_id').val();
+
+        if (!date || !game_id) {
+            $('#error').show();
+            setTimeout(()=>$('#error').hide(),3000);
+            return;
+        }
+
+        $.post('/admin/get-win-report',{
+            date,
+            game_id
+        }, function (res) {
+            $('#dr').html(res);
+        });
+    });
+});
+
+/* LOAD GAMES */
+function loadGames(){
+    $.get('/admin/get-games-for-declare', function(res){
+        let html = '<option selected disabled>-Select Game Name-</option>';
+        res.forEach(g=>{
+            html += `<option value="${g.id}">${g.name}</option>`;
+        });
+        $('#game_id').html(html);
+    });
+}
+</script>

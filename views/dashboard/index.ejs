@@ -1,0 +1,671 @@
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin/dashboard">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Dashboard</li>
+    </ol>
+  </div>
+</div>
+
+
+<div class="row">
+
+  <!-- LEFT WELCOME CARD -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+
+      <!-- TOP GRADIENT HEADER -->
+      <div class="p-4 text-white"
+          style="background: linear-gradient(135deg, #667eea, #764ba2);">
+
+        <div class="d-flex justify-content-between align-items-center">
+
+          <div>
+            <h4 class="mb-1 fw-bold">Welcome Back 👋</h4>
+            <p class="mb-0 opacity-75">Admin Dashboard</p>
+          </div>
+
+          <img src="<%= setting?.logo ? '/upload/' + setting.logo : '/assets/default-logo.png' %>"
+              class="img-fluid"
+              style="max-height:70px;">
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div class="card-body">
+
+        <div class="d-flex align-items-center mb-4">
+
+          <div class="position-relative me-3">
+            <img src="https://icons.veryicon.com/png/o/business/multi-color-financial-and-business-icons/user-139.png"
+                class="rounded-circle shadow"
+                style="width:70px;height:70px;object-fit:cover;">
+          </div>
+
+          <div>
+            <h5 class="mb-0 fw-semibold"><%= admin?.name || "Admin" %></h5>
+            <small class="text-muted">Administrator</small>
+          </div>
+
+        </div>
+
+        <!-- USER STATS -->
+        <div class="row text-center">
+
+          <div class="col-6">
+            <div class="p-3 rounded-3 bg-light shadow-sm">
+              <h4 class="fw-bold text-warning mb-1">
+                <%= counts.unapproved || 0 %>
+              </h4>
+              <small class="text-muted">Unapproved Users</small>
+            </div>
+          </div>
+
+          <div class="col-6">
+            <div class="p-3 rounded-3 bg-light shadow-sm">
+              <h4 class="fw-bold text-success mb-1">
+                <%= counts.approved || 0 %>
+              </h4>
+              <small class="text-muted">Approved Users</small>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT INFO BOXES -->
+  <div class="col-xl-8">
+    <div class="row">
+
+
+
+
+
+        <div class="col-xl-3 col-sm-6 col-12 d-flex">
+          <a href="/admin/users" class="w-100 text-decoration-none">
+          <div class="card dash-widget w-100">
+            <div class="card-body d-flex align-items-center">
+              <div class="dash-widgetimg">
+                <span><i class="fa fa-users fa-2x text-primary"></i></span>
+              </div>
+              <div class="dash-widgetcontent">
+                <h5 class="mb-1"><%= counts.totalUsers %></h5>
+                <p class="mb-0">Total Users</p>
+              </div>
+            </div>
+          </div>
+          </a>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+        <!-- Today Registrations -->
+        <div class="col-xl-3 col-sm-6 col-12 d-flex">
+           <a href="/admin/users" class="w-100 text-decoration-none">
+          <div class="card dash-widget w-100">
+            <div class="card-body d-flex align-items-center">
+              <div class="dash-widgetimg">
+                <span><i class="fa fa-user-plus fa-2x text-success"></i></span>
+              </div>
+              <div class="dash-widgetcontent">
+                <h5 class="mb-1"><%= counts.todayUsers %></h5>
+                <p class="mb-0">Today Registrations</p>
+              </div>
+            </div>
+          </div></a>
+        </div>
+
+  <!-- Players -->
+  <div class="col-xl-3 col-sm-6 col-12 d-flex">
+     <a href="/admin/users" class="w-100 text-decoration-none">
+    <div class="card dash-widget w-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="dash-widgetimg">
+          <span><i class="fa fa-gamepad fa-2x text-warning"></i></span>
+        </div>
+        <div class="dash-widgetcontent">
+          <h5 class="mb-1"><%= counts.players %></h5>
+          <p class="mb-0">Players</p>
+        </div>
+      </div>
+    </div></a>
+  </div>
+
+  <!-- Active Today -->
+  <div class="col-xl-3 col-sm-6 col-12 d-flex">
+     <a href="/admin/users" class="w-100 text-decoration-none">
+    <div class="card dash-widget w-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="dash-widgetimg">
+          <span><i class="fa fa-bolt fa-2x text-danger"></i></span>
+        </div>
+        <div class="dash-widgetcontent">
+          <h5 class="mb-1"><%= counts.activeToday %></h5>
+          <p class="mb-0">Active Today</p>
+        </div>
+      </div>
+    </div></a>
+  </div>
+
+      <!-- <div class="col-xl-3 col-sm-3">
+        <div class="card dash-widget w-100">
+          <span class="info-box-icon bg-primarys">
+            <i class="fa fa-user"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text">Users</span>
+            <span class="info-box-number"><%= counts.totalUsers %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-3">
+        <div class="info-box">
+          <span class="info-box-icon bg-primarys">
+            <i class="fa fa-tag"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text">Today Registrations</span>
+            <span class="info-box-number"><%= counts.todayUsers %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-3">
+        <div class="info-box">
+          <span class="info-box-icon bg-primarys">
+            <i class="fa fa-gamepad"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text">Players</span>
+            <span class="info-box-number"><%= counts.players %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-3">
+        <div class="info-box">
+          <span class="info-box-icon bg-primarys">
+            <i class="fa fa-bolt"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text">Active (today)</span>
+            <span class="info-box-number"><%= counts.activeToday %></span>
+          </div>
+        </div>
+      </div> -->
+
+    </div>
+
+
+    <div class="card mt-4">
+      <div class="card-header">
+         <h4>Total Bids On Single Ank Of Date <%= new Date().toDateString() %></h4>
+
+      </div>
+  <div class="card-body">
+   
+    <div class="row">
+      <div class="col-md-5">
+        <label>Game Name</label>
+        <select id="game_id_data" class="form-control">
+          <option disabled selected>-Select Game Name-</option>
+          <% games?.forEach(game => { %>
+            <option value="<%= game.id %>"><%= game.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-5">
+        <label>Market Time</label>
+        <select id="session" class="form-control">
+          <option disabled selected>-Select Market Time-</option>
+          <option value="Open">Open Market</option>
+          <option value="Close">Close Market</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 mt-4">
+        <button class="btn btn-primary btn-block" id="searchBtn">Get</button>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+
+</div>
+
+<!-- ================= TOTAL BIDS FILTER ================= -->
+
+
+
+<!-- ================= ANK 0–9 GRID ================= -->
+
+<div class="row mt-4">
+<% for(let i=0;i<=9;i++){ %>
+  <div class="col-md-2 mb-3">
+    <div class="card border">
+      <div class="card-header text-center">
+        Total Bids <span id="bid<%= i %>">0</span>
+      </div>
+      <div class="card-body text-center">
+        <h2 id="total<%= i %>">0</h2>
+        <p>Total Bid Amount</p>
+      </div>
+      <div class="card-footer text-center bg-primary text-white">
+        Ank <%= i %>
+      </div>
+    </div>
+  </div>
+<% } %>
+</div>
+
+<!-- ================= TODAY SUMMARY ================= -->
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+  <div class="card-header">
+
+    <h4 class="fw-semibold mb-4">Market Bid Details</h4>
+  </div>
+  <div class="card-body">
+
+    <!-- Header -->
+
+    <!-- Filters -->
+    <div class="row align-items-end mb-4">
+
+      <div class="col-md-4">
+        <label class="form-label fw-medium">Select Date</label>
+        <input type="date" class="form-control rounded-3 shadow-sm" id="game_date">
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label fw-medium">Game Name</label>
+        <select class="form-control rounded-3 shadow-sm" id="game_name">
+          <option selected disabled>-Select Game Name-</option>
+            <option value="all">All Games</option>
+          <% games?.forEach(game => { %>
+            <option value="<%= game.id %>"><%= game.name %></option>
+          <% }) %>
+
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100 rounded-3 shadow-sm" id="get_report">
+  Get Report
+</button>
+      </div>
+
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="table-responsive">
+
+      <table class="table table-bordered align-middle mb-0">
+
+        <tr>
+          <td class="fw-medium">
+            Total Bid Amount: ₹<span id="total_bid_amount">0</span>
+          </td>
+          <td class="text-end">
+            <a href="user-bid-history">
+              <button class="btn btn-sm btn-outline-primary rounded-3">
+                View
+              </button>
+            </a>
+          </td>
+
+          <td class="fw-medium">
+            Withdraw Request: ₹<span id="withd_req">0</span>
+          </td>
+          <td class="text-end">
+            <a href="withdraw-report">
+              <button class="btn btn-sm btn-outline-primary rounded-3">
+                View
+              </button>
+            </a>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="fw-medium">
+            Total Winning Amount: ₹<span id="total_win_amount">0</span>
+          </td>
+          <td class="text-end">
+            <a href="winning-report">
+              <button class="btn btn-sm btn-outline-primary rounded-3">
+                View
+              </button>
+            </a>
+          </td>
+
+          <td class="fw-medium">
+            Total Deposit (UPI): ₹<span id="total_deposit">0</span>
+          </td>
+          <td class="text-end">
+            <a href="auto-deposit-history">
+            <button class="btn btn-sm btn-outline-primary rounded-3">
+              View
+            </button>
+            </a>
+          </td>
+        </tr>
+
+        <tr>
+          <!-- PROFIT / LOSS Dynamic Color -->
+          <td colspan="2" id="loss_color"
+              class="fw-semibold text-white"
+              style="background: linear-gradient(135deg,#28a745,#218838);">
+
+            Total <span id="loss_text">Profit</span> Amount:
+            ₹<span id="total_loss_amount">0</span>
+
+          </td>
+
+          <td class="fw-medium">
+            Add Funds (Manually): ₹<span id="add_fund">0</span>
+          </td>
+
+          <td class="text-end">
+            <a href="manual-deposit-history">
+            <button class="btn btn-sm btn-outline-primary rounded-3">
+              View
+            </button>
+            </a>
+          </td>
+        </tr>
+ 
+      </table>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+
+<!-- 
+
+<div class="card d-none mt-4">
+  <div class="card-body">
+    <h4>Today Summary</h4>
+
+    <table class="table table-bordered">
+      <tr>
+        <td>Total Bid Amount: ₹<span id="total_bid_amount">0</span></td>
+        <td>Withdraw Request: ₹<span id="withd_req">0</span></td>
+      </tr>
+      <tr>
+        <td>Total Winning Amount: ₹<span id="total_win_amount">0</span></td>
+        <td>Total Deposit (UPI): ₹<span id="total_deposit">0</span></td>
+      </tr>
+      <tr>
+        <td id="loss_color">
+          Total <span id="loss_text">Profit</span> Amount:
+          ₹<span id="total_loss_amount">0</span>
+        </td>
+        <td>
+          Add Funds (Manual):
+          ₹<span id="add_fund">0</span>
+        </td>
+      </tr>
+    </table>
+
+  </div>
+</div> -->
+
+<!-- ================= AUTO DEPOSIT TABLE ================= -->
+
+<div class="card mt-4">
+  <div class="card-header">
+    <h5>Fund Request Auto Deposit History</h5>
+  </div>
+
+  <div class="card-body table-responsive">
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>User Name</th>
+          <th>Amount</th>
+          <th>Txn ID</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if(autoDeposit.length){ %>
+          <% autoDeposit.forEach((row,index)=>{ %>
+            <tr>
+              <td><%= index+1 %></td>
+              
+                                    <td>
+                                        <a 
+                                            href="/admin/SingleUser/<%= row.user_id %>" 
+                                            target="_blank"
+                                            class="text-primary font-weight-bold"
+                                        >
+                                            <%= row.name %>
+                                        </a>
+                                    </td>
+              <td>₹<%= row.txn_crdt %></td>
+              <td><%= row.transaction_id %></td>
+              <td><%= row.txn_date %></td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="5" class="text-center">No Data Found</td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<!-- ================= AJAX ================= -->
+
+<script>
+$('#searchBtn').on('click', function(){
+
+  let game_id = $('#game_id_data').val();
+  let session = $('#session').val();
+
+  if(!game_id || !session){
+    alert("Please Select Game & Market Time");
+    return;
+  }
+
+  $.post('/admin/get_todaybid_details',
+    { game_id, session },
+    function(res){
+
+      for(let i=0;i<=9;i++){
+        $('#bid'+i).html(res['Ank'+i]);
+        $('#total'+i).html(res['points'+i]);
+      }
+
+    }
+  );
+
+});
+/*
+$(document).ready(function(){
+
+  $.post('/admin/get_today_totalbid', function(res){
+
+    $('#total_bid_amount').html(res.total_bid);
+    $('#total_win_amount').html(res.total_win);
+    $('#withd_req').html(res.total_withdraw);
+    $('#total_deposit').html(res.total_deposit);
+    $('#add_fund').html(res.add_fund);
+    $('#total_loss_amount').html(res.total_loss);
+
+    if(res.total_loss >= 0){
+      $('#loss_color').addClass('bg-success text-white');
+      $('#loss_text').text('Profit');
+    } else {
+      $('#loss_color').addClass('bg-danger text-white');
+      $('#loss_text').text('Loss');
+    }
+
+  });
+
+});
+*/
+
+
+
+
+</script>
+
+
+<script>
+
+
+
+
+
+function loadReport(game_id = 'all', game_date = '') {
+
+  $.post('/admin/get_today_totalbid', {
+    game_id: game_id,
+    game_date: game_date,
+    apicount: 1
+  }, function(res){
+
+    $('#total_bid_amount').html(res.total_bid);
+    $('#total_win_amount').html(res.total_win);
+    $('#withd_req').html(res.total_withdraw);
+    $('#total_deposit').html(res.total_deposit);
+    $('#add_fund').html(res.add_fund);
+    $('#total_loss_amount').html(res.total_loss);
+
+    // reset classes first
+    $('#loss_color').removeClass('bg-success bg-danger text-white');
+
+    if(res.total_loss >= 0){
+      $('#loss_color').addClass('bg-success text-white');
+      $('#loss_text').text('Profit');
+    } else {
+      $('#loss_color').addClass('bg-danger text-white');
+      $('#loss_text').text('Loss');
+    }
+
+  });
+}
+
+
+
+$(document).ready(function(){
+
+
+  $.ajaxSetup({
+    headers: {
+      'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+  });
+
+  let today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+
+  $('#game_date').val(today); // input me bhi set kar do
+
+  loadReport('all', today);
+
+});
+
+
+$('#get_report').on('click', function(){
+
+  let game_id = $('#game_name').val() || 'all';
+  let game_date = $('#game_date').val();
+
+  if(!game_date){
+    alert("Please select date");
+    return;
+  }
+
+  loadReport(game_id, game_date);
+
+});
+
+
+
+
+
+
+
+
+// $('#get_report').on('click', function(){
+
+//   let game_id = $('#game_name').val();
+//   let game_date = $('#game_date').val();
+
+//   if(!game_date){
+//     alert("Please select date");
+//     return;
+//   }
+
+//   $.post('/admin/get_today_totalbid', {
+//     game_id: game_id || 'all',
+//     game_date: game_date,
+//     apicount: 1
+//   }, function(res){
+
+//     // values update karo
+//     $('#total_bid_amount').html(res.total_bid);
+//     $('#total_win_amount').html(res.total_win);
+//     $('#withd_req').html(res.total_withdraw);
+//     $('#total_deposit').html(res.total_deposit);
+//     $('#add_fund').html(res.add_fund);
+//     $('#total_loss_amount').html(res.total_loss);
+
+//     // profit / loss color
+//     if(res.total_loss >= 0){
+//       $('#loss_color')
+//         .removeClass('bg-danger')
+//         .addClass('bg-success');
+//       $('#loss_text').text('Profit');
+//     } else {
+//       $('#loss_color')
+//         .removeClass('bg-success')
+//         .addClass('bg-danger');
+//       $('#loss_text').text('Loss');
+//     }
+
+//   });
+
+// });
+</script>

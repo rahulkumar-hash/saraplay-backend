@@ -1,0 +1,119 @@
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin/dashboard">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Send Notification</li>
+    </ol>
+  </div>
+</div>
+
+
+
+<div class="row">
+  <div class="col-sm-12">
+
+    <div class="card">
+      <div class="card-body">
+        <h4 class="card-title">Send Notification</h4>
+
+        <form id="notificationForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="row">
+            <div class="col-sm-6">
+              <label>User Search</label>
+              <input type="text" id="userSearch" class="form-control"
+                placeholder="Search user by name or mobile">
+              <div id="userResults" class="list-group mt-2"
+                style="max-height:200px; overflow:auto;"></div>
+
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="sendAll" name="send_all" value="1">
+                <label class="form-check-label">Send to All Users</label>
+              </div>
+
+              <input type="hidden" name="user_id" id="selectedUser">
+            </div>
+
+            <div class="col-sm-6">
+              <label>Title</label>
+              <input class="form-control" name="title">
+            </div>
+
+            <div class="col-sm-12 mt-3">
+              <label>Description</label>
+              <textarea class="form-control" name="body"></textarea>
+            </div>
+          </div>
+
+          <button class="btn btn-primary mt-3">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+/* 🔍 Live user search */
+$('#userSearch').on('keyup', function () {
+  if ($('#sendAll').is(':checked')) return;
+
+  let q = $(this).val();
+  if (q.length < 2) return $('#userResults').html('');
+
+  $.get('/admin/search-user?q=' + q, function (users) {
+    let html = '';
+    if (users.length) {
+      users.forEach(u => {
+        html += `
+          <a href="#" class="list-group-item user-item" data-id="${u.id}">
+            ${u.name} (${u.mobile})
+          </a>`;
+      });
+    } else {
+      html = '<div class="list-group-item text-muted">No users found</div>';
+    }
+    $('#userResults').html(html);
+  });
+});
+
+/* 👤 Select user */
+$(document).on('click', '.user-item', function (e) {
+  e.preventDefault();
+  $('#selectedUser').val($(this).data('id'));
+  $('#userSearch').val($(this).text());
+  $('#userResults').html('');
+  $('#sendAll').prop('checked', false);
+});
+
+/* 🌍 Send all toggle */
+$('#sendAll').on('change', function () {
+  if (this.checked) {
+    $('#userSearch').val('All Users').prop('disabled', true);
+    $('#selectedUser').val('all');
+  } else {
+    $('#userSearch').val('').prop('disabled', false);
+    $('#selectedUser').val('');
+  }
+});
+
+/* 🚀 Submit */
+$('#notificationForm').on('submit', function (e) {
+  e.preventDefault();
+  $.post('/admin/send-notification', $(this).serialize(), function (res) {
+    if (res.res === 'success') {
+      Swal.fire('Success', res.msg, 'success');
+      $('#notificationForm')[0].reset();
+    } else {
+      Swal.fire('Error', res.msg, 'error');
+    }
+  });
+});
+</script>

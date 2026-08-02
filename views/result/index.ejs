@@ -1,0 +1,585 @@
+<div class="page-content">
+
+    <!-- Page Bar -->
+    <div class="page-bar">
+        <div class="page-title-breadcrumb">
+            <!-- <div class="pull-left">
+                            <div class="page-title">Declear Result</div>
+                        </div> -->
+            <ol class="breadcrumb page-breadcrumb pull-right">
+                <li>
+                    <i class="fa fa-home"></i>
+                    <a class="parent-item" href="/admin">Home</a>
+                    <i class="fa fa-angle-right"></i>
+                </li>
+                <li class="active">Declear Result</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Select Game -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Select Game</h4>
+
+                    <div class="row">
+                        <div class="form-group col-md-3">
+                            <label>Result Date</label>
+                            <input class="form-control digits" type="date" id="SubmitDate">
+                        </div>
+
+                        <div class="form-group col-md-4">
+                            <label>Game Name</label>
+                            <select class="form-control" id="game_id_list">
+                                <option disabled selected>Select Game Name</option>
+                            </select>
+
+                        </div>
+
+                        <div class="form-group col-md-3">
+                            <label>Session</label>
+                            <select id="session" class="form-control">
+                                <option disabled selected>-Select Session-</option>
+                                <option value="Open">Open</option>
+                                <option value="Close">Close</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group col-md-2">
+                            <br>
+                            <button type="button" class="btn btn-primary px-5 radius-30" id="submit">
+                                Go
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div id="error" style="display:none;">
+                            <div class="alert alert-danger">
+                                Please Select Game and Session!
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- AJAX RESULT -->
+        <div class="col-md-12" id="dr"></div>
+
+        <!-- History -->
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Game Result History</h4>
+                </div>
+
+                <div class="card-body">
+                    <div class="form-group col-md-3 mb-4">
+                        <label>Result Date</label>
+                        <div class="input-group">
+                            <input class="form-control digits" type="date" id="pick_date">
+                            <button type="button" class="btn btn-primary" id="getHistory">Get</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="usersTable" class="table table-striped table-bordered w-100">
+
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Game Name</th>
+                                    <th>Result Date</th>
+                                    <th>Open Declare Date</th>
+                                    <th>Close Declare Date</th>
+                                    <th>Open Pana</th>
+                                    <th>Close Pana</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyBody">
+                                <% if (data && data.length) { %>
+                                    <% data.forEach(function(v, i){ %>
+                                        <tr>
+                                            <td>
+                                                <%= i+1 %>
+                                            </td>
+                                            <td>
+                                                <%= v.game_name %>
+                                            </td>
+                                            <td>
+                                                <%= v.result_date %>
+                                            </td>
+                                            <td>
+                                                <%= v.open_declare_date || '' %>
+                                            </td>
+                                            <td>
+                                                <%= v.close_declare_date || '' %>
+                                            </td>
+                                            <td>
+                                                <%= v.open_pana %>-<%= v.open_digit %>
+
+                                            </td>
+                                            <td>
+                                                <% if (!v.close_digit) { %>
+                                                    *-***
+                                                    <% } else { %>
+                                                        <%= v.close_digit %>-<%= v.close_pana %>
+                                                                <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</div>
+
+<!-- JS SAME AS CI3 -->
+<script>
+    $(document).ready(function () {
+        let now = new Date();
+        let day = ("0" + now.getDate()).slice(-2);
+        let month = ("0" + (now.getMonth() + 1)).slice(-2);
+        let today = now.getFullYear() + "-" + month + "-" + day;
+
+        $('#SubmitDate').val(today).attr("max", today);
+        $('#pick_date').attr("max", today);
+    });
+</script>
+
+
+<script>
+    $(document).ready(function () {
+
+        // =====================
+        // SET TODAY
+        // =====================
+        const now = new Date();
+        const day = ("0" + now.getDate()).slice(-2);
+        const month = ("0" + (now.getMonth() + 1)).slice(-2);
+        const today = now.getFullYear() + "-" + month + "-" + day;
+
+        $('#SubmitDate').val(today).attr("max", today);
+        $('#pick_date').val(today).attr("max", today);
+
+        // =====================
+        // INITIAL LOAD
+        // =====================
+        loadGames();
+        loadHistory(today);
+
+        // =====================
+        // DATE CHANGE → AUTO LOAD
+        // =====================
+        $('#pick_date').on('change', function () {
+            const date = $(this).val();
+            if (date) {
+                loadHistory(date);
+            }
+        });
+
+        // =====================
+        // OPTIONAL: BUTTON CLICK
+        // =====================
+        $('#getHistory').on('click', function () {
+            const date = $('#pick_date').val();
+            if (date) {
+                loadHistory(date);
+            }
+        });
+    });
+
+    /* =====================
+       LOAD HISTORY (AJAX)
+    ===================== */
+    function loadHistory(date) {
+
+        $.ajax({
+            url: '/admin/get-result-history',
+            type: 'POST',
+            data: { pick_date: date },
+            success: function (res) {
+
+                let html = '';
+
+                if (res.status && res.data.length) {
+                    res.data.forEach((v, i) => {
+                        html += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td>${v.game_name}</td>
+                            <td>${v.result_date}</td>
+                            <td>${v.open_declare_date || ''}</td>
+                            <td>${v.close_declare_date || ''}</td>
+                            <td>
+                                ${v.open_pana}-${v.open_digit}
+
+                                ${
+                                    v.open_declare_date != null
+                                    ? `<button 
+                                            class="btn btn-danger btn-sm deleteBtn" 
+                                            data-action="delete" 
+                                            data-id="${v.id}">
+                                            Delete
+                                    </button>`
+                                    : ''
+                                }
+                            </td>
+                            <td>
+                                ${
+                                    v.close_digit
+                                    ? `
+                                        ${v.close_digit}-${v.close_pana}
+
+                                        ${
+                                            v.close_declare_date != null
+                                            ? `<button 
+                                                    class="btn btn-danger btn-sm deleteBtn" 
+                                                    data-action="update" 
+                                                    data-id="${v.id}">
+                                                    Delete
+                                            </button>`
+                                            : ''
+                                        }
+                                    `
+                                    : '*-***'
+                                }
+                            </td>
+                        </tr>
+                    `;
+                    });
+                } else {
+                    html = `
+                    <tr>
+                        <td colspan="7" class="text-center text-danger">
+                            No record found
+                        </td>
+                    </tr>
+                `;
+                }
+
+                $('#historyBody').html(html);
+            }
+        });
+    }
+
+    /* =====================
+       LOAD GAMES
+    ===================== */
+    function loadGames() {
+        $.get('/admin/get-games-for-declare', function (res) {
+            let html = '<option disabled selected>Select Game Name</option>';
+            res.forEach(g => {
+                html += `
+                <option value="${g.id}">
+                    ${g.name} (${g.open_time}-${g.close_time})
+                </option>`;
+            });
+            $('#game_id_list').html(html);
+        });
+    }
+
+
+
+
+
+
+
+    $("#submit").click(function () {
+
+        let date = $("#SubmitDate").val()
+        let game_id = $("#game_id_list").val()
+        let session = $("#session").val()
+
+        if (!date || !game_id || !session) {
+
+            $("#error").show()
+
+            setTimeout(() => {
+                $("#error").hide()
+            }, 3000)
+
+            return
+        }
+
+        $.post("/admin/get_decleare_game",
+            {
+                date: date,
+                game_id: game_id,
+                session: session
+            },
+
+            function (res) {
+
+                $("#dr").html(res)
+
+            })
+
+    })
+</script>
+
+
+
+<script>
+    loadGames();
+    $(document).ready(function () {
+
+        const now = new Date();
+        const day = ("0" + now.getDate()).slice(-2);
+        const month = ("0" + (now.getMonth() + 1)).slice(-2);
+        const today = now.getFullYear() + "-" + month + "-" + day;
+
+        $('#SubmitDate').val(today).attr("max", today);
+        $('#pick_date').val(today).attr("max", today);
+
+        loadGames();
+        loadHistory(today);
+    });
+
+
+
+
+    $(document).on("click", "#save", function () {
+
+        let date = $("#SubmitDate").val()
+        let game_id = $("#game_id_list").val()
+        let session = $("#session").val()
+        let pana = $("#pana").val()
+        let digit = $("#digit").val()
+
+        $.post("/admin/save_result",
+            {
+                date,
+                game_id,
+                session,
+                pana,
+                digit
+            },
+            function (res) {
+
+                if (res.res === "success") {
+
+                    $.post("/admin/get_decleare_game",
+                        {
+                            date,
+                            game_id,
+                            session
+                        },
+                        function (html) {
+
+                            $("#dr").html(html)
+                            const date = $('#pick_date').val();
+                            if (date) {
+                                loadHistory(date);
+                            }
+
+                        })
+
+                }
+
+            })
+
+    })
+
+
+    function quick_view() {
+        let date = $("#SubmitDate").val()
+        let game_id = $("#game_id_list").val()
+        let session = $("#session").val()
+        let pana = $("#pana").val()
+        let digit = $("#digit").val()
+
+        $("#exampleModal").modal("show")
+        $("#exampleModal .modal-body").html(
+            "<center><i class='fa fa-spinner fa-spin fa-3x'></i></center>"
+        )
+        $.ajax({
+            url: "/admin/show_winner",
+            type: "POST",
+            data: {
+                date: date,
+                game_id: game_id,
+                session: session,
+                pana: pana,
+                digit: digit
+            },
+            success: function (res) {
+                $("#exampleModal .modal-body").html(res)
+            }
+        })
+    }
+    
+
+
+
+
+    $(document).on("click","#declare",function(){
+
+let date = $("#SubmitDate").val()
+let game_id = $("#game_id_list").val()
+let session = $("#session").val()
+let pana = $("#pana").val()
+let digit = $("#digit").val()
+
+if(!date || !game_id || !session || !pana || !digit){
+
+$("#error1").show()
+
+setTimeout(function(){
+$("#error1").hide()
+},3000)
+
+return
+}
+
+$.ajax({
+
+url:"/admin/declare_result",
+
+type:"POST",
+
+data:{
+date:date,
+game_id:game_id,
+session:session,
+pana:pana,
+digit:digit
+},
+
+beforeSend:function(){
+
+$("#declare").prop("disabled",true)
+$("#declare").text("Please Wait...")
+
+},
+
+success:function(res){
+
+const response = typeof res === "string" ? JSON.parse(res) : res
+
+const Toast = Swal.mixin({
+
+toast:true,
+position:"top-end",
+showConfirmButton:false,
+timer:1000
+
+})
+
+Toast.fire({
+icon:response.res,
+title:response.msg
+})
+
+if(response.res==="success"){
+
+setTimeout(function(){
+location.reload()
+},500)
+
+}
+
+}
+
+})
+
+})
+
+
+
+
+
+
+
+</script>
+
+
+<script>
+document.addEventListener("click", function(e) {
+
+    if (e.target.classList.contains("deleteBtn")) {
+
+        const id = e.target.getAttribute("data-id");
+        const action = e.target.getAttribute("data-action");
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Ye record delete ho jayega!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+
+            if (result.isConfirmed) {
+
+                // 🔹 Loading alert
+                Swal.fire({
+                    title: 'Please wait...',
+                    text: 'Deleting...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // 🔹 API call
+                fetch(`/admin/delete-result/${id}/${action}`, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(res => {
+
+                    if (res.status) {
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: 'Record deleted successfully'
+                        });
+
+                        // 🔥 Row remove without reload
+                        // e.target.closest("tr").remove();
+                        const date = $('#pick_date').val();
+                        if (date) {
+                            loadHistory(date);
+                        }
+
+                    } else {
+                        Swal.fire('Error', res.message || 'Delete failed', 'error');
+                    }
+
+                })
+                .catch(err => {
+                    Swal.fire('Error', 'Something went wrong', 'error');
+                });
+
+            }
+        });
+    }
+});
+</script>

@@ -1,0 +1,145 @@
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+       
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin/dashboard">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">Withdraw Request History</li>
+        </ol>
+    </div>
+</div>
+
+<div class="row">
+<div class="col-md-12">
+<div class="card">
+<div class="card-body">
+
+<table id="example4" class="table table-bordered table-striped w-100">
+<thead>
+<tr>
+    <th>#</th>
+    <th>User Name</th>
+    <th>Mobile</th>
+    <th>Amount</th>
+    <th>Request No.</th>
+    <th>Payment Mode</th>
+    <th>Reason</th>
+    <th>Date</th>
+    <th>Status</th>
+    <th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+<% if(data && data.length){ %>
+<% data.forEach((v,i)=>{ %>
+<tr>
+    <td><%= i+1 %></td>
+    <td><%= v.name %> </td>
+    <td><%= v.mobile %></td>
+    <td>₹<%= v.amount %></td>
+    <td><%= v.txn_id %></td>
+    <td><%= v.payment_mode %></td>
+    <td><%= v.reason || '-' %></td>
+    <td><%= v.date %></td>
+    <td>
+        <span class="badge 
+            <%= v.status==='Pending'?'bg-warning':
+                v.status==='Accepted'?'bg-success':'bg-danger' %>">
+            <%= v.status %>
+        </span>
+    </td>
+    <td>
+        <button 
+          class="btn btn-success btn-sm"
+          onclick="approveWithdraw(<%= v.id %>,<%= v.user_id %>,<%= v.amount %>)"
+          <%= v.status!=='Pending'?'disabled':'' %>>
+          Approve
+        </button>
+
+        <button 
+          class="btn btn-danger btn-sm"
+          onclick="openRejectModal(<%= v.id %>)"
+          <%= v.status!=='Pending'?'disabled':'' %>>
+          Reject
+        </button>
+    </td>
+</tr>
+<% }) %>
+<% } %>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5>Reject Withdraw Request</h5>
+<button class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+<input type="hidden" id="reject_id">
+<textarea id="reject_reason" class="form-control" placeholder="Reason"></textarea>
+<br>
+<button class="btn btn-danger" onclick="rejectWithdraw()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+    $(document).ready(function () {
+    $('#example4').DataTable({
+        dom: "Bfrtip",
+        buttons: ["copy", "csv", "excel", "pdf", "print"]
+    });
+});
+
+function approveWithdraw(id,user_id,amount){
+    Swal.fire({
+        title: "Are you sure?",
+        text: "Approve this withdraw request?",
+        icon: "warning",
+        showCancelButton: true
+    }).then(result => {
+        if(result.isConfirmed){
+            $.post('/admin/master-accept-withdraw',{
+                id,user_id,amount
+            },res=>{
+                Swal.fire(res.msg);
+                if(res.res==="success"){
+                    setTimeout(()=>location.reload(),1500);
+                }
+            });
+        }
+    });
+}
+
+function openRejectModal(id){
+    $('#reject_id').val(id);
+    $('#rejectModal').modal('show');
+}
+
+function rejectWithdraw(){
+    $.post('/admin/master-reject-withdraw',{
+        id: $('#reject_id').val(),
+        reason: $('#reject_reason').val()
+    },res=>{
+        Swal.fire(res.msg);
+        if(res.res==="success"){
+            setTimeout(()=>location.reload(),1500);
+        }
+    });
+}
+
+</script>

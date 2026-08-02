@@ -1,0 +1,146 @@
+<!-- PAGE BAR -->
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Manage Starline Games</li>
+    </ol>
+  </div>
+</div>
+
+
+
+<div class="row">
+  <div class="col-sm-12">
+
+      <div class="card">
+        <div class="card-header">
+          <header>
+            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#starlineModal">
+              Add Game
+            </button>
+          </header>
+        </div>
+
+        <div class="card-body">
+          <table class="table table-bordered" id="starlineTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Hindi Name</th>
+                <th>Open Time</th>
+                <th>Status</th>
+                <th>Market</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="starlineBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+  </div>
+</div>
+
+
+
+
+<!-- ADD / EDIT MODAL -->
+ 
+<!-- 
+<div class="modal fade"
+     id="addGameModal"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Add Starline Game</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="addGameFormStarLine">
+
+          <input class="form-control mb-2"
+                 name="name"
+                 placeholder="Game Name">
+
+          <input class="form-control mb-2"
+                 name="hname"
+                 placeholder="Hindi Name">
+
+          <label>Open Time</label>
+          <input type="time"
+                 class="form-control mb-2"
+                 name="open_time">
+
+          <button type="submit"
+                  id="addGameBtn"
+                  class="btn btn-primary mt-2">
+            Submit
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div> -->
+
+
+<div class="modal fade"
+     id="starlineModal"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 id="modalTitle">Add Starline Game</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="starlineForm">
+
+          <input type="hidden" name="id" id="starline_id">
+
+          <input class="form-control mb-2"
+                 name="name"
+                 id="name"
+                 placeholder="Game Name">
+
+          <input class="form-control mb-2"
+                 name="hname"
+                 id="hname"
+                 placeholder="Hindi Name">
+
+          <label>Open Time</label>
+          <input type="time"
+                 class="form-control mb-2"
+                 name="open_time"
+                 id="open_time">
+
+          <button type="submit"
+                  id="addGameBtn"
+                  class="btn btn-primary mt-2">
+            Save
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,105 @@
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <div class="pull-left">
+      <div class="page-title">Contact Setting</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form id="contactForm">
+
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="id" value="<%= data.id %>">
+
+      <div class="row">
+        <div class="col-sm-6">
+          <label>Mobile</label>
+          <input type="text" class="form-control mb-3" name="mobile" value="<%= data.mobile %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Telegram</label>
+          <input type="text" class="form-control mb-3" name="telegram" value="<%= data.telegram %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>WhatsApp</label>
+          <input type="text" class="form-control mb-3" name="whatsapp" value="<%= data.whatsapp %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Landline 1</label>
+          <input type="text" class="form-control mb-3" name="landline" value="<%= data.landline %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Landline 2</label>
+          <input type="text" class="form-control mb-3" name="landline2" value="<%= data.landline2 %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Email 1</label>
+          <input type="email" class="form-control mb-3" name="email" value="<%= data.email %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Email 2</label>
+          <input type="email" class="form-control mb-3" name="email2" value="<%= data.email2 %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Facebook</label>
+          <input type="text" class="form-control mb-3" name="fb_link" value="<%= data.fb_link %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Twitter</label>
+          <input type="text" class="form-control mb-3" name="twitter_link" value="<%= data.twitter_link %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>YouTube</label>
+          <input type="text" class="form-control mb-3" name="youtube_link" value="<%= data.youtube_link %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Instagram</label>
+          <input type="text" class="form-control mb-3" name="insta_link" value="<%= data.insta_link %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Latitude</label>
+          <input type="text" class="form-control mb-3" name="latitude" value="<%= data.latitude %>">
+        </div>
+
+        <div class="col-sm-6">
+          <label>Longitude</label>
+          <input type="text" class="form-control mb-3" name="longitude" value="<%= data.longitude %>">
+        </div>
+
+        <div class="col-sm-12">
+          <label>Address</label>
+          <textarea class="form-control mb-3" name="address"><%= data.address %></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary px-5">Update</button>
+    </form>
+  </div>
+</div>
+
+<script>
+$("#contactForm").on("submit", function(e) {
+  e.preventDefault();
+
+  $.post("/admin/contact-setting/update", $(this).serialize(), function(res) {
+    if (res.res === "success") {
+      Swal.fire("Success", res.msg, "success");
+    } else {
+      Swal.fire("Error", res.msg, "error");
+    }
+  });
+});
+</script>

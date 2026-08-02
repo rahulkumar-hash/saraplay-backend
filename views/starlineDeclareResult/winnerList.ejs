@@ -1,0 +1,16 @@
+<table class="table table-bordered">
+<tr>
+<th>User</th>
+<th>Points</th>
+</tr>
+<% if(bids.length){ bids.forEach(b=>{ %>
+<tr>
+<td><%= b.mobile %></td>
+<td><%= b.points %></td>
+</tr>
+<% }) } else { %>
+<tr>
+<td colspan="2" class="text-center">No Winner</td>
+</tr>
+<% } %>
+</table>

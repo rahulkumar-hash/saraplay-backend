@@ -1,0 +1,24 @@
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Bid On</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (winners.length) { %>
+      <% winners.forEach(w => { %>
+        <tr>
+          <td><%= w.mobile %></td>
+          <td><%= w.bid_on %></td>
+          <td>₹<%= w.bid_amount %></td>
+        </tr>
+      <% }) %>
+    <% } else { %>
+      <tr>
+        <td colspan="3" class="text-center text-danger">No winner found</td>
+      </tr>
+    <% } %>
+  </tbody>
+</table>

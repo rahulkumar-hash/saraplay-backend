@@ -1,0 +1,86 @@
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Declare Result</li>
+    </ol>
+  </div>
+</div>
+
+
+
+<div class="row">
+    <div class="col-sm-12">
+        <!-- FILTER -->
+        <div class="card mb-3">
+        <div class="card-body">
+            <h4>Select Game</h4>
+
+            <form id="starlineDeclareFilterForm">
+            <div class="row">
+
+                <div class="col-md-4">
+                <label>Result Date</label>
+                <input type="date" name="result_date" id="SubmitDate" class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                <label>Game Name</label>
+                <select name="game_id" id="game_id" class="form-control"></select>
+                </div>
+
+                <div class="col-md-2 mt-4">
+                <button class="btn btn-primary w-100">Go</button>
+                </div>
+
+            </div>
+            </form>
+
+            <div id="error" class="alert alert-danger mt-2 d-none">
+            Please select date & game
+            </div>
+        </div>
+        </div>
+
+        <!-- DECLARE FORM -->
+        <div id="dr"></div>
+
+        <!-- TABLE -->
+        <div class="card">
+        <div class="card-body">
+            <table class="table table-bordered w-100" id="starlineDeclareTable">
+            <thead>
+                <tr>
+                <th>#</th>
+                <th>Game</th>
+                <th>Result Date</th>
+                <th>Declare Date</th>
+                <th>Number</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- MODAL -->
+<div class="modal fade" id="exampleModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Winner</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+</div>

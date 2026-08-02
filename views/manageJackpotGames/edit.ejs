@@ -1,0 +1,21 @@
+<div class="card">
+  <div class="card-body">
+    <h4>Update Jackpot Game</h4>
+
+    <form method="POST" action="/admin/add-jackpot-game">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="id" value="<%= data.id %>">
+
+      <input type="text" name="name"
+             value="<%= data.name %>"
+             class="form-control mb-3">
+
+      <label>Close Time</label>
+      <input type="time" name="close_time"
+             value="<%= data.close_time %>"
+             class="form-control mb-3">
+
+      <button class="btn btn-primary">Update</button>
+    </form>
+  </div>
+</div>

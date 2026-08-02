@@ -1,0 +1,133 @@
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a href="/admin/dashboard">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">Withdraw Request History</li>
+        </ol>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+
+                <table id="withdrawTable" class="table table-bordered table-striped w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>User Name</th>
+                            <th>Mobile</th>
+                            <th>Amount</th>
+                            <th>Request No.</th>
+                            <th>Payment Mode</th>
+                            <th>Reason</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                </table>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Reject Withdraw Request</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reject_id">
+                <textarea id="reject_reason" class="form-control" placeholder="Reason"></textarea>
+                <br>
+                <button class="btn btn-danger w-100" onclick="rejectWithdraw()">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    let table;
+
+    $(document).ready(function () {
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+
+        table = $('#withdrawTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "/admin/withdraw-request/data",
+                type: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": csrfToken
+                }
+            },
+            dom: "Bfrtip",
+            buttons: ["copy", "csv", "excel", "pdf", "print"],
+            columns: [
+                { data: "no" },
+                { data: "name" },
+                { data: "mobile" },
+                { data: "amount" },
+                { data: "txn_id" },
+                { data: "payment_mode" },
+                { data: "reason" },
+                { data: "date" },
+                { data: "status" },
+                { data: "action" }
+            ]
+        });
+
+    });
+
+    // ✅ APPROVE
+    function approveWithdraw(id) {
+        Swal.fire({
+            title: "Are you sure?",
+            icon: "warning",
+            showCancelButton: true
+        }).then(r => {
+            if (r.isConfirmed) {
+                $.post('/admin/accept-withdraw', { id }, res => {
+                    Swal.fire(res.msg);
+                    if (res.res === "success") {
+                        table.ajax.reload(null, false);
+                    }
+                });
+            }
+        });
+    }
+
+    // ✅ OPEN MODAL
+    function openRejectModal(id) {
+        $('#reject_id').val(id);
+        $('#reject_reason').val('');
+        $('#rejectModal').modal('show');
+    }
+
+    // ✅ REJECT
+    function rejectWithdraw() {
+        $.post('/admin/reject-withdraw', {
+            id: $('#reject_id').val(),
+            reason: $('#reject_reason').val()
+        }, res => {
+            Swal.fire(res.msg);
+            if (res.res === "success") {
+                $('#rejectModal').modal('hide');
+                table.ajax.reload(null, false);
+            }
+        });
+    }
+</script>

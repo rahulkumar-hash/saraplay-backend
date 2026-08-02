@@ -1,0 +1,466 @@
+<style>
+.switchToggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switchToggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #28a745;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+.btn{
+    margin-top: 15px;
+}
+</style>
+
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+        <div class="pull-left">
+            <!-- <div class="page-title">Main Setting</div> -->
+        </div>
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">Main Setting</li>
+        </ol>
+    </div>
+</div>
+
+<div class="row">
+
+    <!-- ================= BANK DETAILS ================= -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <header>Add Bank Details</header>
+            </div>
+            <div class="card-body">
+                <form id="FormSubmit">
+                    <input type="hidden" name="location" value="/admin/update-bank">
+
+                    <div class="form-group">
+                        <label>Account Holder Name</label>
+                        <input type="text" name="account_holder_name"
+                                value="<%= data.account_holder_name %>"
+                                class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Account Number</label>
+                        <input type="text" name="account_no"
+                                value="<%= data.account_no %>"
+                                class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>IFSC Code</label>
+                        <input type="text" name="ifsc_code"
+                                value="<%= data.ifsc_code %>"
+                                class="form-control">
+                    </div>
+
+                    <button class="btn btn-primary btn-sm">
+                        Submit
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= APP LINK ================= -->
+    <div class="col-md-6"> 
+        <div class="card">
+            <div class="card-header">
+                <header>Add App Link</header>
+            </div>
+            <div class="card-body">
+                <form class="FormSubmit">
+                    <input type="hidden" name="location" value="/admin/update-applink">
+
+                    <div class="form-group">
+                        <label>App Link</label>
+                        <input type="text" name="app_link"
+                                value="<%= data.app_link %>"
+                                class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Share Message</label>
+                        <textarea name="applink_share_message"
+                                    class="form-control"
+                                    rows="4"><%= data.applink_share_message %></textarea>
+                    </div>
+
+                    <button class="btn btn-primary btn-sm">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= UPI ================= -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <header>Add UPI ID</header>
+            </div>
+            <div class="card-body">
+                <form id="FormSubmit2">
+                    <input type="hidden" name="location" value="/admin/update-upi">
+
+                    <div class="form-group">
+                        <label>Google UPI</label>
+                        <input type="text" name="google_upi"
+                                value="<%= data.google_upi %>"
+                                class="form-control">
+                    </div>
+
+                    <button class="btn btn-primary btn-sm">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MAINTENANCE ================= -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <header>App Maintenance</header>
+            </div>
+            <div class="card-body">
+                <form id="FormSubmit3">
+                    <input type="hidden" name="location" value="/admin/update-maintenance">
+
+                    <div class="form-group">
+                        <label>Share Message</label>
+                        <textarea name="maintainance_share_message"
+                                    class="form-control"
+                                    rows="4"><%= data.maintainance_share_message %></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switchToggle">
+                            <input type="checkbox" id="msg"
+                                <%= data.maintainance_status ? 'checked' : '' %>>
+                            <span class="slider aqua round"></span>
+                        </label>
+                        <label>Show Msg (ON/OFF)</label>
+                    </div>
+
+                    <button class="btn btn-primary btn-sm">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <header>Payment Settings</header>
+            </div>
+
+            <div class="card-body">
+
+                <!-- ================= FORM ================= -->
+                <form id="FormSubmit5">
+
+                    <!-- API URL -->
+                    <input type="hidden" name="location" value="/admin/update-payment-settings">
+
+                    <!-- ================= UPI ================= -->
+                    <div class="form-group mb-3">
+                        <label>UPI Payment Status</label><br>
+
+                        <!-- hidden fallback -->
+                        <input type="hidden" name="upi_status" value="0">
+
+                        <label class="switchToggle">
+                            <input type="checkbox"
+                                name="upi_status"
+                                value="1"
+                                id="upi_status"
+                                <%= data.upi_status == 1 ? 'checked' : '' %>>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- ================= PRIME ================= -->
+                    <div class="form-group mb-3">
+                        <label>PrimeXPay Status</label><br>
+
+                        <input type="hidden" name="primexpay_status" value="0">
+
+                        <label class="switchToggle">
+                            <input type="checkbox"
+                                name="primexpay_status"
+                                value="1"
+                                id="primexpay_status"
+                                <%= data.primexpay_status == 1 ? 'checked' : '' %>>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- ================= BUTTON ================= -->
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        Submit
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VALUES ================= -->
+    <div class="col-md-12">
+        
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Add Values</h4>
+            </div>
+
+            <div class="card-body">
+
+                <form id="FormSubmit4">
+
+                <input type="hidden" name="location" value="/admin/update-values">
+
+                <% let days = data.withdraw_closing_day ? data.withdraw_closing_day.split(',') : []; %>
+
+                <div class="row">
+
+                    <div class="col-md-4 mb-3">
+                    <label>Minimum Deposit</label>
+                    <input type="number" name="min_deposite"
+                        value="<%= data.min_deposite %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Maximum Deposit</label>
+                    <input type="number" name="max_deposite"
+                        value="<%= data.max_deposite %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Minimum Withdrawal</label>
+                    <input type="number" name="min_withdrawal"
+                        value="<%= data.min_withdrawal %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Maximum Withdrawal</label>
+                    <input type="number" name="max_withdrawal"
+                        value="<%= data.max_withdrawal %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Minimum Transfer</label>
+                    <input type="number" name="min_transfer"
+                        value="<%= data.min_transfer %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Maximum Transfer</label>
+                    <input type="number" name="max_transfer"
+                        value="<%= data.max_transfer %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Minimum Bid</label>
+                    <input type="number" name="min_bid"
+                        value="<%= data.min_bid %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Maximum Bid</label>
+                    <input type="number" name="max_bid"
+                        value="<%= data.max_bid %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                    <label>Welcome Bonus</label>
+                    <input type="number" name="welcome_bonus"
+                        value="<%= data.welcome_bonus %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                    <label>Withdraw Open Time</label>
+                    <input type="time" name="withdraw_open_time"
+                        value="<%= data.withdraw_open_time %>" class="form-control">
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                    <label>Withdraw Close Time</label>
+                    <input type="time" name="withdraw_close_time"
+                        value="<%= data.withdraw_close_time %>" class="form-control">
+                    </div>
+
+                    <!-- Multi Select -->
+                    <div class="col-md-6 mb-3">
+                    <label>Withdraw Closing Days</label>
+                    <select name="withdraw_closing_day[]" multiple class="form-control select2">
+
+                        <option value="sunday" <%= days.includes('sunday') ? 'selected' : '' %>>Sunday</option>
+                        <option value="monday" <%= days.includes('monday') ? 'selected' : '' %>>Monday</option>
+                        <option value="tuesday" <%= days.includes('tuesday') ? 'selected' : '' %>>Tuesday</option>
+                        <option value="wednesday" <%= days.includes('wednesday') ? 'selected' : '' %>>Wednesday</option>
+                        <option value="thursday" <%= days.includes('thursday') ? 'selected' : '' %>>Thursday</option>
+                        <option value="friday" <%= days.includes('friday') ? 'selected' : '' %>>Friday</option>
+                        <option value="saturday" <%= days.includes('saturday') ? 'selected' : '' %>>Saturday</option>
+
+                    </select>
+                    </div>
+
+                    <!-- Toggle -->
+                   
+                    <div class="col-md-4 mb-3">
+                        <label class="switchToggle">
+                            <input type="checkbox"
+                                id="msg1"
+                                <%= data.global_batting=='true' ? 'checked' : '' %>>
+                            <span class="slider"></span>
+                        </label>
+
+                        <label>
+                            Global Betting
+                            
+                            <input type="hidden" name="global_batting" id="global_batting" value="<%= data.global_batting %>">
+                        </label>
+                    </div>
+
+
+
+                    <div class="col-md-12 mt-3">
+                        <button class="btn btn-primary">Submit</button>
+                    </div>
+
+                </div>
+
+                </form>
+
+            </div>
+            </div>
+
+
+
+
+
+    </div>
+
+</div>
+
+
+<!-- <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" /> -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).on('submit', 'form', function(e){
+    e.preventDefault();
+    let form = this;
+    let url = $(form).find('input[name="location"]').val();
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: new FormData(form),
+        processData: false,
+        contentType: false,
+        success: function(res){
+            Swal.fire(res.res, res.msg, res.res);
+            if(res.res === 'success'){
+                setTimeout(() => location.reload(), 600);
+            }
+        }
+    });
+});
+
+$("#msg").on("change", function(){
+    $.post("/main-setting-status");
+});
+
+$(document).ready(function () {
+  $('.select2').select2({
+    placeholder: "Select Closing Days",
+    width: '100%'
+  });
+});
+
+
+</script>
+
+<script>
+$("#msg1").on("change", function(){
+  let text = $(this).is(":checked") ? "true" : "false";
+  $(this).closest(".col-md-4").find(".badge").text(text);
+  $("#global_batting").val(text);
+});
+</script>
+
+<script>
+$(document).on('submit', '#FormSubmit5', function(e){
+    e.preventDefault();
+
+    let form = this;
+    let url = $(form).find('input[name="location"]').val();
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: new FormData(form),
+        processData: false,
+        contentType: false,
+
+        success: function(res){
+
+            // SweetAlert response
+            Swal.fire(res.res, res.msg, res.res);
+
+            if(res.res === 'success'){
+                setTimeout(() => location.reload(), 800);
+            }
+        },
+
+        error: function(){
+            Swal.fire("error", "Something went wrong", "error");
+        }
+    });
+});
+</script>

@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="en" data-layout-mode="light_mode">
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="">
+	<meta name="keywords" content="">
+	<meta name="author" content="Dreams Technologies">
+	<meta name="robots" content="index, follow">
+	<meta name="csrf-token" content="<%= csrfToken %>">
+	<title><%= title || "Sara777" %></title>
+
+	<!-- <script src="/assets/js/theme-script.js"></script>	 -->
+
+	<script src="/assets/js/jquery-3.7.1.min.js" ></script>
+	<!-- Favicon -->
+	<link rel="shortcut icon" type="image/x-icon" href="/assets/img/favicon.png">
+
+	<!-- Apple Touch Icon -->
+	<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png">
+
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+
+	<!-- Datetimepicker CSS -->
+	<link rel="stylesheet" href="/assets/css/bootstrap-datetimepicker.min.css">
+
+	<!-- animation CSS -->
+	<link rel="stylesheet" href="/assets/css/animate.css">
+
+	<!-- Select2 CSS -->
+	<link rel="stylesheet" href="/assets/plugins/select2/css/select2.min.css">
+	<link rel="stylesheet" href="/assets/css/dataTables.bootstrap5.min.css">
+
+
+	<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+	<!-- Tabler Icon CSS -->
+	<link rel="stylesheet" href="/assets/plugins/tabler-icons/tabler-icons.min.css">
+
+	<!-- Fontawesome CSS -->
+	<link rel="stylesheet" href="/assets/plugins/fontawesome/css/fontawesome.min.css">
+	<link rel="stylesheet" href="/assets/plugins/fontawesome/css/all.min.css">
+
+	<!-- Color Picker Css -->
+	<!-- <link rel="stylesheet" href="/assets/plugins/@simonwep/pickr/themes/nano.min.css"> -->
+
+	<link rel="stylesheet" href="/assets/plugins/extra/notyf.min.css">
+	<link rel="stylesheet" href="/assets/forms/style.css">
+
+	<!-- Main CSS -->
+	<link rel="stylesheet" href="/assets/css/style.css">
+
+	<style>
+		:root {
+			--primary-color: <%= setting.primary_color || '#0d6efd' %>;
+			--secondary-color: <%= setting.secondary_color || '#0d6efd' %>;
+		}
+
+		.btn.btn-primary {
+			background-color: var(--primary-color) !important;
+			border-color: var(--primary-color) !important;
+		}
+
+		.color_m{
+			background-color: var(--primary-color) !important;
+			border-color: var(--primary-color) !important;
+		}
+		.color_s{
+
+			background-color: var(--secondary-color) !important;
+			border-color: var(--secondary-color) !important;
+
+		}
+
+		.btn.btn-primary:hover {
+			opacity: 0.9 !important;
+		}
+		.bg-danger {
+			background-color: #e10101 !important;
+			border: 1px solid #e10101;
+		}
+		.bg-success {
+			background-color: #00713e !important;
+			border: 1px solid #00713e;
+		}
+		.btn.btn-info {
+			background-color: #013aaa !important;
+			border: 1px solid #013aaa !important;
+		}
+
+		.sidebar .sidebar-logo .logo img {
+			max-width: 66px !important;
+		}
+				
+	</style>
+
+
+</head>
+
+<body>
+	
+	<div id="global-loader">
+		<div class="whirly-loader"> </div>
+	</div>
+
+
+	<!-- Main Wrapper -->
+	<div class="main-wrapper">
+
+		<!-- Header -->
+		<%- include("../partials/header") %>
+		<!-- /Header -->
+
+		<!-- Sidebar -->
+		
+		<%- include("../partials/sidebar") %>
+		<!-- /Sidebar -->
+
+		<!-- Horizontal Sidebar -->
+		
+		<!-- /Horizontal Sidebar -->
+
+		<!-- Two Col Sidebar -->
+		
+		<!-- /Two Col Sidebar -->
+
+		<div class="page-wrapper">
+			<div class="content">
+				
+				<%- body %>
+
+			</div>
+			
+			
+			<%- include("../partials/footer") %>
+		</div>
+
+	</div>
+	<!-- /Main Wrapper -->
+
+	<!-- jQuery -->
+
+	<!-- Bootstrap Core JS -->
+<script 
+ src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+	<!-- Feather Icon JS -->
+	<script src="/assets/js/feather.min.js" ></script>
+
+	<!-- Slimscroll JS -->
+	<script src="/assets/js/jquery.slimscroll.min.js" ></script>
+
+	<!-- Chart JS -->
+	<script src="/assets/plugins/apexchart/apexcharts.min.js" ></script>
+	<script src="/assets/plugins/apexchart/chart-data.js" ></script>
+
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+    <script src="/assets/js/dataTables.bootstrap5.min.js"></script>
+        
+	<!-- Color Picker JS -->
+	<!-- <script src="/assets/plugins/@simonwep/pickr/pickr.es5.min.js" ></script> -->
+	<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+	
+
+
+	<!-- Custom JS -->
+	<!-- <script src="/assets/js/theme-colorpicker.js" ></script> -->
+	<script src="/assets/js/script.js" ></script>
+
+	<script src="/assets/plugins/extra/notyf.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/additional-methods.min.js"></script>
+	<script src="/assets/forms/validate.js"></script>
+	<script src="/assets/forms/function.js"></script>
+	<script src="/assets/rocket-loader.min.js"></script>
+
+
+</body>
+
+</html>

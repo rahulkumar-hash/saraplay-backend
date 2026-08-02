@@ -1,0 +1,140 @@
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin/dashboard">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Notice Management</li>
+    </ol>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-sm-12">
+
+    <div class="card">
+      <div class="card-header">
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#noticeModal">
+          Add Notice
+        </button>
+      </div>
+
+      <div class="card-body">
+        <table id="noticData" class="display table table-bordered" style="width:100%">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Notice Date</th>
+              <th>Description</th>
+              <th>Created</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.forEach((n, i) => { %>
+            <tr>
+              <td><%= i + 1 %></td>
+              <td><%= n.title %></td>
+              <td><%= n.notice_date %></td>
+              <td><%= n.des %></td>
+              <td><%= n.date %></td>
+              <td>
+                <span class="badge <%= n.status === 'true' ? 'bg-success' : 'bg-danger' %>">
+                  <%= n.status === 'true' ? 'Active' : 'Inactive' %>
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-danger btn-sm"
+                  onclick="deleteRow(<%= n.id %>)">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal fade" id="noticeModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="noticeForm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="modal-header">
+          <h5>Add Notice</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="text" name="title" class="form-control mb-3" placeholder="Notice Title">
+          <textarea name="des" class="form-control mb-3" placeholder="Notice Description"></textarea>
+          <input type="date" name="ndate" class="form-control">
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+$("#noticeForm").on("submit", function(e) {
+  e.preventDefault();
+
+  $.post("/admin/notice-management/add", $(this).serialize(), function(res) {
+    if (res.res === "success") {
+      Swal.fire("Success", res.msg, "success").then(() => location.reload());
+    } else {
+      Swal.fire("Error", res.msg, "error");
+    }
+  });
+});
+</script>
+<script>
+function deleteRow(id) {
+  Swal.fire({
+    title: "Are you sure?",
+    text: "Ye notice delete ho jayega!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, delete it!"
+  }).then((result) => {
+    if (result.isConfirmed) {
+
+      $.ajax({
+        url: "/admin/notice-management/delete/" + id,
+        type: "POST",
+        data: {
+          _csrf: "<%= csrfToken %>"
+        },
+        success: function(res) {
+          if (res.res === "success") {
+            Swal.fire("Deleted!", res.msg, "success")
+              .then(() => location.reload());
+          } else {
+            Swal.fire("Error", res.msg, "error");
+          }
+        },
+        error: function() {
+          Swal.fire("Error", "Server Error", "error");
+        }
+      });
+
+    }
+  });
+}
+</script>

@@ -1,0 +1,223 @@
+<!-- PAGE BAR -->
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a href="/admin"> Home</a>
+            </li>
+
+            <li class="active">
+                Auto Deposit History
+            </li>
+        </ol>
+    </div>
+</div>
+
+
+<!-- FILTER -->
+<div class="row">
+
+    <div class="col-sm-12">
+
+        <div class="card">
+
+            <div class="card-body">
+
+                <div class="row align-items-end">
+
+                    <div class="col-md-4">
+
+                        <label>
+                            Filter By Date
+                        </label>
+
+                        <input 
+                            type="date" 
+                            id="filter_date" 
+                            class="form-control"
+                        >
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- TABLE -->
+<div class="row">
+
+    <div class="col-md-12">
+
+        <div class="card">
+
+            <div class="card-body table-responsive">
+
+                <table 
+                    id="autoDepositTable" 
+                    class="table table-bordered table-striped w-100"
+                >
+
+                    <thead>
+
+                        <tr>
+
+                            <th>#</th>
+                            <th>User Name</th>
+                            <th>Amount</th>
+                            <th>Txn ID</th>
+                            <th>Txn Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="autoDepositBody">
+
+                        <% if(data && data.length){ %>
+
+                            <% data.forEach(function(v,i){ %>
+
+                                <tr>
+
+                                    <td><%= i+1 %></td>
+
+                                    <td>
+                                        <a href="/admin/single-user/<%= v.user_id %>">
+                                            <%= v.name %>
+                                        </a>
+                                    </td>
+
+                                    <td>
+                                        ₹<%= v.txn_crdt %>
+                                    </td>
+
+                                    <td>
+                                        <%= v.transaction_id %>
+                                    </td>
+
+                                    <td>
+                                        <%= v.txn_date %>
+                                    </td>
+
+                                </tr>
+
+                            <% }) %>
+
+                        <% } %>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+<script>
+
+$(document).ready(function () {
+
+    $('#autoDepositTable').DataTable({
+        pageLength: 25
+    });
+
+});
+
+
+$('#filter_date').on('change', function () {
+
+    const date = $(this).val();
+
+    $.ajax({
+
+        url: '/admin/auto-deposit-history/search',
+
+        type: 'POST',
+
+        data: {
+            date: date
+        },
+
+        success: function (res) {
+
+            let html = '';
+
+            if (res.status && res.data.length > 0) {
+
+                res.data.forEach((v, i) => {
+
+                    html += `
+                        <tr>
+
+                            <td>${i + 1}</td>
+
+                            <td>
+                                <a href="/admin/single-user/${v.user_id}">
+                                    ${v.name ?? ''}
+                                </a>
+                            </td>
+
+                            <td>
+                                ₹${v.txn_crdt ?? 0}
+                            </td>
+
+                            <td>
+                                ${v.transaction_id ?? ''}
+                            </td>
+
+                            <td>
+                                ${v.txn_date ?? ''}
+                            </td>
+
+                        </tr>
+                    `;
+                });
+
+            } else {
+
+                html = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            No Record Found
+                        </td>
+                    </tr>
+                `;
+            }
+
+            $('#autoDepositBody').html(html);
+
+        },
+
+        error:function(err){
+
+            console.log(err);
+
+        }
+
+    });
+
+});
+
+</script>

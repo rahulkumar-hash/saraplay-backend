@@ -1,0 +1,107 @@
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Starline Sell Report</li>
+    </ol>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- FILTER -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+
+        <form id="starlineSellFilterForm">
+          <div class="row">
+
+            <div class="form-group col-md-2">
+              <label>Date</label>
+              <input type="date"
+                     name="result_date"
+                     id="sell_result_date"
+                     class="form-control">
+            </div>
+
+            <div class="form-group col-md-4">
+              <label>Game Name</label>
+              <select name="win_game_name"
+                      id="sell_game_id"
+                      class="form-control">
+                <option value="">-Select Game Name-</option>
+                <% games.forEach(g => { %>
+                  <option value="<%= g.id %>"><%= g.name %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="form-group col-md-4">
+              <label>Game Type</label>
+              <select name="game_type"
+                      id="sell_game_type"
+                      class="form-control">
+                <option value="">-Select Game Type-</option>
+                <option value="all">All Type</option>
+                <option value="1">Single Digit</option>
+                <option value="2">Jodi Digit</option>
+                <option value="3">Single Pana</option>
+                <option value="4">Double Pana</option>
+                <option value="5">Triple Pana</option>
+                <option value="6">Half Sangam</option>
+                <option value="7">Full Sangam</option>
+              </select>
+            </div>
+
+            <div class="form-group col-md-2">
+              <label>&nbsp;</label>
+              <button class="btn btn-primary btn-block mt-4">
+                Submit
+              </button>
+            </div>
+
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+
+        <div class="table-responsive">
+          <table id="starlineSellTable"
+                 class="display table table-striped table-bordered w-100">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Game Name</th>
+                <th>Game Type</th>
+                <th>Total Sell Amount</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

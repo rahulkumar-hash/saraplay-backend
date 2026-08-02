@@ -1,0 +1,170 @@
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin/dashboard">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Withdraw History Report</li>
+    </ol>
+  </div>
+</div>
+
+<!-- FILTER -->
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Withdraw History Report</h4>
+                <div class="row">
+                    <div class="form-group col-md-4">
+                        <label>Date</label>
+                        <input type="date" id="filter_date" class="form-control digits">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body table-responsive">
+                <table id="withdrawTable" class="table table-bordered table-striped w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>User Name</th>
+                            <th>Mobile</th>
+                            <th>Amount</th>
+                            <th>Request No</th>
+                            <th>Payment Mode</th>
+                            <th>Reason</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="withdrawBody">
+                        <% if (data && data.length) { %>
+                            <% data.forEach(function(v, i){ %>
+                                <tr>
+                                    <td><%= i+1 %></td>
+                                    <td><%= v.name %>  <a href="/admin/SingleUser/<%= v.user_id %>" target="_blank">
+            <i class="fa fa-external-link"></i>
+          </a></td>
+                                    <td><%= v.mobile %></td>
+                                    <td>₹<%= v.amount %></td>
+                                    <td><%= v.txn_id %></td>
+                                    <td><%= v.payment_mode %></td>
+                                    <td><%= v.reason || '' %></td>
+                                    <td><%= v.date %></td>
+                                    <td>
+                                        <span class="badge 
+                                            <%= v.status === 'Pending' ? 'bg-warning' :
+                                                v.status === 'Accepted' ? 'bg-success' : 'bg-danger' %>">
+                                            <%= v.status %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-success btn-sm"
+                                            <%= v.status !== 'Pending' ? 'disabled' : '' %>
+                                            onclick="approveWithdraw(<%= v.id %>,<%= v.user_id %>,<%= v.amount %>)">
+                                            Approve
+                                        </button>
+
+                                        <button class="btn btn-danger btn-sm"
+                                            <%= v.status !== 'Pending' ? 'disabled' : '' %>
+                                            onclick="rejectWithdraw(<%= v.id %>)">
+                                            Reject
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+                
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Reject Withdraw</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reject_id">
+        <textarea id="reject_reason" class="form-control" placeholder="Reason"></textarea>
+        <button class="btn btn-danger mt-3" onclick="submitReject()">Submit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    $('#withdrawTable').DataTable();
+});
+
+/* FILTER */
+$('#filter_date').on('change', function(){
+    $.post('/admin/withdraw-report/search', {
+        date: $(this).val()
+    }, function(res){
+        if(res.status){
+            let html = '';
+            res.data.forEach((v,i)=>{
+                html += `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${v.name}</td>
+                    <td>${v.mobile}</td>
+                    <td>₹${v.amount}</td>
+                    <td>${v.txn_id}</td>
+                    <td>${v.payment_mode}</td>
+                    <td>${v.reason || ''}</td>
+                    <td>${v.date}</td>
+                    <td>${v.status}</td>
+                    <td>-</td>
+                </tr>`;
+            });
+            $('#withdrawBody').html(html);
+        }
+    });
+});
+
+/* APPROVE */
+function approveWithdraw(id,user_id,amount){
+    if(!confirm("Approve withdraw request?")) return;
+
+    $.post('/admin/accept-withdraw',{id,user_id,amount},function(res){
+        alert(res.msg);
+        if(res.res==='success') location.reload();
+    });
+}
+
+/* REJECT */
+function rejectWithdraw(id){
+    $('#reject_id').val(id);
+    $('#rejectModal').modal('show');
+}
+
+function submitReject(){
+    $.post('/admin/reject-withdraw',{
+        id: $('#reject_id').val(),
+        reason: $('#reject_reason').val()
+    }, function(res){
+        alert(res.msg);
+        if(res.res==='success') location.reload();
+    });
+}
+</script>

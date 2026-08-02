@@ -1,0 +1,227 @@
+<style>
+
+/* ===============================
+   ROOT COLORS (Dynamic)
+================================ */
+:root {
+    --primary: <%= setting?.primary_color || '#f9a825' %>;
+    --secondary: <%= setting?.secondary_color || '#1565c0' %>;
+}
+
+/* ===============================
+   MODERN BACKGROUND
+================================ */
+.login-wrapper.login-new {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    /* Smooth gradient */
+    background: linear-gradient(120deg, var(--primary), var(--secondary));
+}
+
+/* ===============================
+   BLUR GLOW CIRCLES (modern trend)
+================================ */
+.login-wrapper.login-new::before,
+.login-wrapper.login-new::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.6;
+}
+
+/* Orange glow */
+.login-wrapper.login-new::before {
+    width: 400px;
+    height: 400px;
+    background: var(--primary);
+    top: -100px;
+    left: -100px;
+}
+
+/* Blue glow */
+.login-wrapper.login-new::after {
+    width: 400px;
+    height: 400px;
+    background: var(--secondary);
+    bottom: -100px;
+    right: -100px;
+}
+
+/* ===============================
+   GLASS LOGIN CARD 🔥
+================================ */
+.card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+/* ===============================
+   CONTENT ABOVE BACKGROUND
+================================ */
+.login-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* ===============================
+   INPUT STYLE
+================================ */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+.form-control::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* ===============================
+   BUTTON STYLE
+================================ */
+.btn-primary {
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    border: none;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+/* ===============================
+   TEXT COLOR (white for glass UI)
+================================ */
+.login-userheading h3,
+.login-userheading h4,
+label,
+.copyright-text {
+    color: #fff;
+}
+
+/* ===============================
+   LOGO ADJUST
+================================ */
+.login-logo img {
+    max-height: 70px;
+}
+
+</style>
+<div class="row w-100">
+    <div class="col-lg-3 mx-auto " > 
+        <div class="login-content login-new user-login">
+                <!-- <pre><%= JSON.stringify(setting, null, 2) %></pre> -->
+            <div class="login-logo text-center mb-4">
+                <!-- <img src="/assets/img/logo.svg" alt="img"> -->
+                  <% if(setting?.logo){ %>
+                    <!-- <img src="/uploads/<%= setting.logo %>" height="60" class="mt-2"> -->
+                     <img src="<%= setting?.logo ? '/upload/' + setting.logo : '/assets/default-logo.png' %>" style="height: auto;">
+
+                <% } %>
+                <a href="javascript:void(0)" class="login-logo logo-white">
+                    <!-- <img src="/assets/img/logo-white.svg" alt="Img"> -->
+                      <% if(setting?.logo){ %>
+                    <!-- <img src="/uploads/<%= setting.logo %>" height="60" class="mt-2"> -->
+                     <img src="<%= setting?.logo ? '/upload/' + setting.logo : '/assets/default-logo.png' %>" style="height: auto;">
+
+                <% } %>
+                </a>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm"  method="post"  action="javascript:void(0)">
+                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                <div class="card">
+                    <div class="card-body p-5" style="background-color: #ffffff2e;">
+
+                        <div class="login-userheading text-center mb-4">
+                            <h3>Sign In</h3>
+                            <h4>Access the Dreamspos panel using your email and passcode.</h4>
+                        </div>
+
+                        <!-- EMAIL -->
+                        <div class="mb-3"> 
+                            <label class="form-label">
+                                Username <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="text"
+                                       name="email"
+                                       class="form-control" value="" placeholder="Username"
+                                       >
+                                <!-- <span class="input-group-text border-start-0">
+                                    <i class="ti ti-lock"></i>
+                                </span> -->
+                            </div>
+                        </div>
+
+                        <!-- PASSWORD -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Password <span class="text-danger">*</span>
+                            </label>
+                            <div class="pass-group">
+                                <input type="password"
+                                       name="password"
+                                       id="password" value=""
+                                       class="pass-input form-control" placeholder="Password"
+                                       >
+                                <!-- <span class="ti toggle-password ti-eye-off text-gray-9"
+                                      style="cursor:pointer"
+                                      id="togglePassword"></span> -->
+                            </div>
+                        </div>
+
+                        <!-- REMEMBER + FORGOT -->
+                        <div class="form-login authentication-check mb-3">
+                            <div class="row">
+                                <div class="col-12 d-flex align-items-center justify-content-between">
+                                    <label class="checkboxs ps-4 mb-0 fs-16 text-gray-6">
+                                        <input type="checkbox">
+                                        <span class="checkmarks"></span> Remember me
+                                    </label>
+
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BUTTON -->
+                        <div class="form-login">
+                            <button type="submit"
+                                    class="btn btn-primary w-100"
+                                    id="loginBtn">
+                                Sign In
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
+
+        </div>
+
+        <div class="my-4 d-flex justify-content-center align-items-center copyright-text">
+            <p>Copyright © 2026 Sara777</p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1718 @@
+<div class="row">
+
+  <!-- LEFT USER CARD -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <div class="col-md-4">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="p-4 text-white" style="background:#a7a9d9;border-radius:16px 16px 0 0;">
+
+        <div class="d-flex justify-content-between">
+
+          <div>
+            <h6 class="mb-1">
+              <%= user.name %>
+            </h6>
+            <small>
+              <div class="d-flex align-items-center gap-2">
+
+  <span><%= user.mobile %></span>
+
+  <!-- CALL BUTTON -->
+  <a href="tel:<%= user.mobile %>" class="btn btn-success btn-sm" title="Call">
+    <i class="fa fa-phone"></i>
+  </a>
+
+  <!-- WHATSAPP BUTTON -->
+  <a href="https://wa.me/91<%= user.mobile %>" target="_blank" 
+     class="btn btn-success btn-sm" style="background:#25D366;border:none;" 
+     title="WhatsApp">
+     <i class="fa-brands fa-whatsapp"></i>
+  </a>
+
+</div>
+            </small>
+          </div>
+
+          <div class="text-end">
+
+
+
+
+
+
+
+
+
+
+              <div class="text-end">
+
+                <!-- STATUS -->
+                <div class="mb-2">
+                  <% if(user.status === 'true'){ %>
+                    <a class="badge bg-success text-white"
+                      onclick="changeStatus(<%= user.id %>,'status','false','Deactivate')">
+                      Active
+                    </a>
+                  <% } else { %>
+                    <a class="badge bg-danger text-white"
+                      onclick="changeStatus(<%= user.id %>,'status','true','Activate')">
+                      Inactive
+                    </a>
+                  <% } %>
+                </div>
+
+                <!-- LOGOUT -->
+                <div>
+                  <% if(user.logout === 'true'){ %>
+                    <a class="badge bg-warning text-white"
+                      >
+                      Logged Out
+                    </a>
+                  <% } else { %>
+                    <a class="badge bg-info text-white"
+                      >
+                      Logout Now
+                    </a>
+                  <% } %>
+                </div>
+
+              </div>
+
+
+
+
+
+
+
+
+
+
+            
+
+            <!-- <div class="mb-1">
+              Active:
+              <span class="badge bg-success">Yes</span>
+            </div> -->
+
+            <!-- <div class="mb-1">
+              TP:
+              <span class="badge bg-success">Yes</span>
+            </div> -->
+
+            <!-- <div>
+              Logout Status:
+              <br>
+              <span class="badge bg-info">
+                Logout Now
+              </span>
+            </div> -->
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+
+          <div>
+            <input type="radio"> Security Pin
+          </div>
+
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#changePinModal">
+            Change
+          </button>
+
+        </div>
+
+        <hr>
+
+        <p class="mb-3">
+          Available Balance:
+          <strong>₹<%= balance %></strong>
+        </p>
+
+        <div class="d-flex gap-2">
+
+          <button class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#addFundModal">
+            Add Fund
+          </button>
+
+          <button class="btn btn-info btn-sm w-100" data-bs-toggle="modal" data-bs-target="#withdrawModal">
+            Withdraw Fund
+          </button>
+
+
+          <!-- <button class="btn btn-danger btn-sm w-100">
+            Delete Account
+          </button> -->
+
+          <button class="btn btn-danger btn-sm w-100"
+          onclick="DeleteUser(<%= user.id %>,'id','users','Delete')">
+          Delete Account
+        </button>
+
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- RIGHT PERSONAL INFO -->
+
+  <div class="col-md-8">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-4">Personal Information</h5>
+
+        <div class="row mb-3">
+
+          <div class="col-md-6">
+            <strong>Full Name :</strong>
+          </div>
+
+          <div class="col-md-6">
+            <%= user.name %>
+          </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row mb-3">
+
+          <div class="col-md-6">
+            <strong>Mobile :</strong>
+          </div>
+
+          <div class="col-md-6">
+            <small class="d-flex align-items-center gap-2">
+
+  <%= user.mobile %>
+
+  <a href="tel:<%= user.mobile %>" class="btn btn-light btn-sm" style="background:#3125d3 !important;border:none;color:#fff !important" >
+    <i class="fa fa-phone"></i>
+  </a>
+
+  <a href="https://wa.me/91<%= user.mobile %>" target="_blank" style="background:#25D366 !important;border:none;color:#fff !important" 
+     class="btn btn-light btn-sm">
+    <i class="fa-brands fa-whatsapp"></i>
+  </a>
+
+</small>
+          </div>
+
+        </div>
+
+        <div class="row mb-3">
+
+          <div class="col-md-6">
+            <strong>Email :</strong>
+          </div>
+
+          <div class="col-md-6">
+            <%= user.email %>
+          </div> 
+
+        </div>
+
+        <div class="row mb-4">
+
+          <div class="col-md-6">
+            <strong>Password :</strong>
+          </div>
+
+          <div class="col-md-6">
+            <%= user.password %>
+            <br><br>
+
+            <button class="btn btn-warning btn-sm"
+              onclick="resetPassword(<%= user.id %>)">
+              Reset Password
+            </button>
+          </div>
+
+        </div>
+
+
+
+        <!-- STATS -->
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+
+            <div class="p-2 text-center text-white rounded" style="background:green">
+
+              Total Add Fund : ₹<%= stats.totalDeposit %>
+
+            </div>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <div class="p-2 text-center text-white rounded" style="background:red">
+
+              Total Withdrawal : ₹<%= stats.totalWithdraw %>
+
+            </div>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <div class="p-2 text-center text-white rounded" style="background:blue">
+
+              Total Bid Amount : ₹<%= stats.totalBid %>
+
+            </div>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <div class="p-2 text-center text-white rounded" style="background:orange">
+
+              Total Winning Amount : ₹<%= stats.totalWin %>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <hr class="mt-4">
+
+        <div class="row">
+
+          <div class="col-md-6">
+
+            <strong>Creation Date :</strong>
+            <%= user.date %>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <strong>Last Seen :</strong>
+            <%= user.login_time %>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div class="modal fade" id="addFundModal">
+  <div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Add Fund</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <input type="number" id="addFundAmount" class="form-control" placeholder="Enter Amount">
+
+      </div>
+
+      <div class="modal-footer">
+
+        <button class="btn btn-primary" id="addFundBtn">
+          Submit
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<div class="modal fade" id="withdrawModal">
+  <div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Withdraw Fund</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <input type="number"  id="withdrawAmount"  class="form-control" placeholder="Enter Amount">
+
+      </div>
+
+      <div class="modal-footer">
+
+        <button class="btn btn-info text-white" id="withdrawBtn">
+          Submit
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<div class="row mt-4">
+
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-4">Payment Information</h5>
+
+        <div class="row mb-3">
+
+          <div class="col-md-6">
+            <strong>Bank Name :</strong>
+            <div><%= userBank.bank_name || '-' %></div>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Branch Address :</strong>
+            <div><%= userBank.branch || '-' %></div>
+          </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row mb-3">
+
+          <div class="col-md-4">
+            <strong>A/c Holder Name :</strong>
+            <div><%= userBank.account_holder_name || '-' %></div>
+          </div>
+
+          <div class="col-md-4">
+            <strong>A/c Number :</strong>
+            <div><%= userBank.account_no || '-' %></div>
+          </div>
+
+          <div class="col-md-4">
+            <strong>IFSC Code :</strong>
+            <div><%= userBank.ifsc_code || '-' %></div>
+          </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row">
+
+          <div class="col-md-4">
+            <strong>PhonePe No. :</strong>
+            <div><%= userBank.phonepe || '-' %></div>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Google Pay No. :</strong>
+            <div><%= userBank.google_pay || '-' %></div>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Paytm No. :</strong>
+            <div><%= userBank.paytm || '-' %></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 
+
+<div class="row mt-4">
+
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-4">Payment Information</h5>
+
+        <div class="row mb-3">
+
+          <div class="col-md-6">
+            <strong>Bank Name :</strong>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Branch Address :</strong>
+          </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row mb-3">
+
+          <div class="col-md-4">
+            <strong>A/c Holder Name :</strong>
+          </div>
+
+          <div class="col-md-4">
+            <strong>A/c Number :</strong>
+          </div>
+
+          <div class="col-md-4">
+            <strong>IFSC Code :</strong>
+          </div>
+
+        </div>
+
+        <hr>
+
+        <div class="row">
+
+          <div class="col-md-4">
+            <strong>PhonePe No. :</strong>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Google Pay No. :</strong>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Paytm No. :</strong>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div> -->
+
+
+
+<!-- Deposit History -->
+
+<div class="row mt-4">
+
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-3">Deposite History</h5>
+
+        <hr>
+
+        <div class="table-responsive">
+
+          <table class="table table-bordered table-hover align-middle">
+
+            <thead class="table-light">
+
+              <tr>
+
+                <th>#</th>
+
+                <th>TXN ID</th>
+
+                <th>Date</th>
+
+                <th>Amount</th>
+
+                <th>Transaction Note</th>
+
+              </tr>
+
+            </thead>
+
+            
+            <tbody>
+
+            <% if(depositHistory.length === 0){ %>
+
+            <tr>
+            <td colspan="5" class="text-center">No Data</td>
+            </tr>
+
+            <% } %>
+
+            <% depositHistory.forEach((row,i)=>{ %>
+
+            <tr>
+
+            <td><%= i+1 %></td>
+
+            <td><%= row.transaction_id %></td>
+
+            <td><%= row.txn_date %></td>
+
+            <td class="text-success">
+
+            ₹<%= row.txn_crdt %> Credit
+
+            </td>
+
+            <td><%= row.txn_comment %></td>
+
+            </tr>
+
+            <% }) %>
+
+            </tbody>
+            
+          </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between">
+
+          <div>
+            Showing 0 to 0 of 0 entries
+          </div>
+
+          <div>
+
+            <button class="btn btn-light btn-sm">
+              Previous
+            </button>
+
+            <button class="btn btn-light btn-sm">
+              Next
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<div class="row mt-4">
+
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-3">Withdraw Fund Request List</h5>
+
+        <hr>
+
+        <div class="d-flex justify-content-between mb-3">
+
+          <div>
+            Show
+            <select class="form-select form-select-sm d-inline-block w-auto">
+              <option>10</option>
+              <option>25</option>
+              <option>50</option>
+            </select>
+            entries
+          </div>
+
+          <div>
+            Search:
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+          </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+          <table id="withdrawTable"  class="table table-bordered table-hover align-middle">
+
+            <thead class="table-light">
+
+              <tr>
+
+                <th>#</th>
+                <th>Amount</th>
+                <th>Request No.</th>
+                <th>Payment Mode</th>
+                <th>Reason</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              <tr>
+                <td colspan="8" class="text-center text-muted">
+                  No data available in table
+                </td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+        <div class="d-flex justify-content-between">
+
+          <div>
+            Showing 0 to 0 of 0 entries
+          </div>
+
+          <div>
+
+            <button class="btn btn-light btn-sm">Previous</button>
+            <button class="btn btn-light btn-sm">Next</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- BID HISTORY -->
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="row mt-4">
+
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-3">Bid History</h5>
+
+        <hr>
+          <div class="d-flex justify-content-between mb-3">
+
+          <div>
+            Show
+            <select class="form-select form-select-sm d-inline-block w-auto">
+              <option>10</option>
+              <option>25</option>
+              <option>50</option>
+            </select>
+            entries
+          </div>
+
+          <div>
+            Search:
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+          </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+          <table id="bidHistoryTable" class="table table-bordered table-hover align-middle">
+
+            <thead class="table-light">
+
+              <tr>
+                <th>#</th>
+                <th>Bid TXN ID</th>
+                <th>Game Name</th>
+                <th>Game Type</th>
+                <th>Session</th>
+                <th>Open Paana</th>
+                <th>Open Digit</th>
+                <th>Close Paana</th>
+                <th>Close Digit</th>
+                <th>Jodi Digit</th>
+                <th>Points</th>
+                <th>Date</th>
+                <!-- <th>Action</th> -->
+              </tr>
+
+            </thead>
+
+            <tbody id="bidBody">
+
+              <tr>
+                <td colspan="13" class="text-center text-muted">
+                  Loading...
+                </td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+
+
+<div class="row mt-4">
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-3">Wallet Transaction History</h5>
+
+        <hr>
+
+        <div class="d-flex justify-content-between mb-3">
+
+          <div>
+            Show
+            <select class="form-select form-select-sm d-inline-block w-auto">
+              <option>10</option>
+              <option>25</option>
+              <option>50</option>
+            </select>
+            entries
+          </div>
+
+          <div>
+            Search:
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+          </div>
+
+        </div>
+
+        
+        <div class="table-responsive">
+
+<table id="walletTable" class="table table-bordered table-hover align-middle">
+
+<thead class="table-light">
+
+<tr>
+<th>#</th>
+<th>TXN ID</th>
+<th>Date</th>
+<th>Amount</th>
+<th>Transaction Note</th>
+</tr>
+
+</thead>
+
+<tbody id="walletBody">
+
+<tr>
+<td colspan="5" class="text-center text-muted">
+Loading...
+</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+       
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+<div class="row mt-4">
+  <div class="col-12">
+
+    <div class="card border-0 shadow-sm rounded-4">
+
+      <div class="card-body">
+
+        <h5 class="mb-3">Winning History Report</h5>
+
+        <hr>
+
+        <div class="row mb-3">
+
+          <div class="col-md-3">
+
+            <label class="form-label">Result Date</label>
+
+            <input type="date" id="winningDate" class="form-control">
+
+          </div>
+
+        </div>
+
+
+        <div class="d-flex justify-content-between mb-3">
+
+          <div>
+            Show
+            <select class="form-select form-select-sm d-inline-block w-auto">
+              <option>10</option>
+              <option>25</option>
+              <option>50</option>
+            </select>
+            entries
+          </div>
+
+          <div>
+            Search:
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+          </div>
+
+        </div>
+
+
+        <div class="table-responsive">
+
+          <table id="winningTable" class="table table-bordered table-hover align-middle">
+
+            <thead class="table-light">
+
+              <tr>
+
+                <th>#</th>
+                <th>TXN ID</th>
+                <th>Game Name</th>
+                <th>Game Type</th>
+                <th>Session</th>
+                <th>Pana</th>
+                <th>Amount</th>
+                <th>Date</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="winningBody">
+
+              <tr>
+                <td colspan="8" class="text-center text-muted">
+                  No data available in table
+                </td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <div class="d-flex justify-content-between">
+
+          <div>
+            Showing 0 to 0 of 0 entries
+          </div>
+
+          <div>
+
+            <button class="btn btn-light btn-sm">Previous</button>
+            <button class="btn btn-light btn-sm">Next</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+<div class="modal fade" id="changePinModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Change Security Pin</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <input type="password"
+               id="newPin"
+               maxlength="4"
+               class="form-control"
+               placeholder="Enter 4 digit pin">
+
+      </div>
+
+      <div class="modal-footer">
+
+        <button class="btn btn-primary" id="changePinBtn">
+          Submit
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<script>
+const userId = <%= user.id %>;
+const csrfToken = "<%= csrfToken %>";
+</script>
+
+<script>
+  
+  
+  document.querySelector("#addFundBtn").addEventListener("click", async () => {
+
+  const amount = document.querySelector("#addFundAmount").value;
+
+  if (!amount || amount <= 0) {
+    // alert("Enter valid amount");
+    notyf.error('Enter valid amount');
+    return;
+  }
+
+  const res = await fetch("/admin/user-add-fund", {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json",
+      "CSRF-Token": csrfToken
+    },
+
+    body: JSON.stringify({
+      user_id: userId,
+      amount: amount
+    })
+
+  });
+
+  const data = await res.json();
+
+  notyf.success(data.message);
+
+  location.reload();
+
+});
+
+
+
+
+document.querySelector("#withdrawBtn").addEventListener("click", async () => {
+
+  const amount = document.querySelector("#withdrawAmount").value;
+
+  if (!amount || amount <= 0) {
+    notyf.error("Enter valid amount");
+    return;
+  }
+
+  const res = await fetch("/admin/user-withdraw-fund", {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json",
+      "CSRF-Token": csrfToken
+    },
+
+    body: JSON.stringify({
+      user_id: userId,
+      amount: amount
+    })
+
+  });
+
+  const data = await res.json();
+
+  notyf.success(data.message);
+
+  location.reload();
+
+});
+
+
+
+</script>
+
+<script>
+function resetPassword(userId) {
+
+  Swal.fire({
+    title: "Are you sure?",
+    text: "Password will be reset to 12345678",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Reset"
+  }).then((result) => {
+
+    if (result.isConfirmed) {
+
+      fetch("/webapi/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CSRF-Token": csrfToken
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          password: "12345678"
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        if (data.success) {
+          Swal.fire("Success", "Password Reset Successfully", "success");
+          location.reload();
+        } else {
+          Swal.fire("Error", "Failed to reset password", "error");
+        }
+
+      });
+
+    }
+
+  });
+
+}
+</script>
+
+<script>
+
+$(document).ready(function(){
+
+    const userId = "<%= user.id %>";  // user id from backend
+
+    loadUserBids(userId);
+    loadWalletHistory(userId);
+});
+
+
+
+
+
+
+
+
+
+
+
+function loadUserBids(userId){
+
+    $.ajax({
+        url: "/admin/SingleUserBidHis/" + userId,
+        type: "GET",
+        success:function(res){
+
+            let html = '';
+
+            if(res.status && res.data.length){
+
+                res.data.forEach((v,i)=>{
+
+                  const formatted = new Date(v.date).toLocaleString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true
+                    });
+
+
+                    html += `
+                    <tr>
+
+                        <td>${i+1}</td>
+                        <td>${v.bid_txn_id}</td>
+                        <td>${v.game_name}</td>
+                        <td>${v.game_type}</td>
+                        <td>${v.session}</td>
+                        <td>${v.open_paana || 'N/A'}</td>
+                        <td>${v.open_digit || 'N/A'}</td>
+                        <td>${v.close_paana || 'N/A'}</td>
+                        <td>${v.close_digit || 'N/A'}</td>
+                        <td>${v.jodi_digit || 'N/A'}</td>
+                        <td>${v.points}</td>
+                        <td>${formatted}</td>
+
+                        
+                    </tr>
+                    `;
+
+                });
+
+            }else{
+
+                html = `
+                <tr>
+                    <td colspan="13" class="text-center text-muted">
+                        No data available
+                    </td>
+                </tr>
+                `;
+
+            }
+
+            $("#bidBody").html(html);
+
+        }
+    });
+
+}
+
+function loadWalletHistory(userId){
+
+    $.ajax({
+
+
+
+        url: "/admin/wallet-history/" + userId,
+        type: "GET",
+
+        success:function(res){
+
+            let html = '';
+
+            if(res.status && res.data.length){
+
+                res.data.forEach((v,i)=>{
+
+                    let amount = '';
+                    let color = '';
+
+                    if(v.txn_crdt > 0){
+                        amount = '₹'+v.txn_crdt+' Credit';
+                        color = 'text-success';
+                    }else{
+                        amount = '₹'+v.txn_dbdt+' Debit';
+                        color = 'text-danger';
+                    }
+
+                    html += `
+                    <tr>
+
+                        <td>${i+1}</td>
+                        <td>${v.transaction_id || '-'}</td>
+                        <td>${v.txn_date}</td>
+                        <td class="${color} fw-bold">${amount}</td>
+                        <td>${v.txn_comment}</td>
+
+                    </tr>
+                    `;
+
+                });
+
+            }else{
+
+                html = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                    No data available
+                    </td>
+                </tr>
+                `;
+
+            }
+
+            $("#walletBody").html(html);
+
+        }
+
+    });
+
+}
+
+
+
+
+
+
+document.querySelector("#changePinBtn").addEventListener("click", async () => {
+
+  const pin = document.querySelector("#newPin").value;
+
+  if(!pin || pin.length !== 4){
+    notyf.error("Enter 4 digit pin");
+    return;
+  }
+
+  const res = await fetch("/admin/change-user-pin", {
+
+    method:"POST",
+
+    headers:{
+      "Content-Type":"application/json",
+      "CSRF-Token":csrfToken
+    },
+
+    body: JSON.stringify({
+      user_id: userId,
+      pin: pin
+    })
+
+  });
+
+  const data = await res.json();
+
+  notyf.success(data.message);
+
+  if(data.success){
+    location.reload();
+  }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+function changeStatus(id, column, status, text) {
+
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You want to " + text,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes"
+  }).then((result) => {
+
+    if (result.isConfirmed) {
+
+      $.ajax({
+        url: "/admin/user/status-update",
+        type: "POST",
+        data: {
+          id: id,
+          column: column,
+          status: status
+        },
+        success: function (res) {
+
+          if (res.success) {
+
+            Swal.fire(
+              "Success",
+              "Status Updated Successfully",
+              "success"
+            );
+
+            location.reload();
+          } else {
+
+            Swal.fire(
+              "Error",
+              "Update Failed",
+              "error"
+            );
+
+          }
+
+        }
+
+      });
+
+    }
+
+  });
+
+}
+
+
+
+
+
+
+
+
+
+
+function DeleteUser(id) {
+
+  const csrfToken = document
+    .querySelector('meta[name="csrf-token"]')
+    .getAttribute("content");
+
+  Swal.fire({
+    title: "Are you sure?",
+    text: "This user will be deleted!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, Delete it!"
+  }).then((result) => {
+
+    if (result.isConfirmed) {
+
+      $.ajax({
+        url: "/admin/user-delete",
+        type: "POST",
+        headers: {
+          "CSRF-Token": csrfToken
+        },
+        data: {
+          id: id
+        },
+        success: function (res) {
+
+          if (res.success) {
+
+            Swal.fire({
+              title: "Deleted!",
+              text: res.message,
+              icon: "success",
+              timer: 1500,
+              showConfirmButton: false
+            });
+
+            // reload table without reset pagination
+            // $('#usersTable').DataTable().ajax.reload(null, false);
+            location.href="Users";
+
+          } else {
+
+            Swal.fire(
+              "Error",
+              res.message || "Delete Failed",
+              "error"
+            );
+
+          }
+
+        },
+        error: function () {
+          Swal.fire(
+            "Error",
+            "Server Error",
+            "error"
+          );
+        }
+      });
+
+    }
+
+  });
+
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+<script>
+const csrfToken1 = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+
+$(document).ready(function () {
+  loadWithdrawData();
+});
+
+function loadWithdrawData() {
+
+  $.ajax({
+    url: "/admin/admin-withdraw-list",
+    type: "POST",
+    headers: {
+      "CSRF-Token": csrfToken1
+    },
+    data: {
+      user_id: "<%= user.id %>"
+    },
+    success: function (res) {
+
+      let html = '';
+
+      if (res.data.length > 0) {
+
+        res.data.forEach((row, index) => {
+
+          html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>₹${row.amount}</td>
+              <td>${row.txn_id}</td>
+              <td>${row.payment_mode}</td>
+              <td>${row.reason ?? '-'}</td>
+              <td>${row.date}</td>
+              <td>
+                ${row.status === 'Pending'
+                  ? '<span class="badge bg-warning">Pending</span>'
+                  : row.status === 'Accepted'
+                  ? '<span class="badge bg-success">Accepted</span>'
+                  : '<span class="badge bg-danger">Rejected</span>'}
+              </td>
+              <td>
+                ${row.status === 'Pending'
+                  ? `<button class="btn btn-success btn-sm"
+                      onclick="updateWithdraw(${row.id},'Accepted')">Approve</button>
+                     <button class="btn btn-danger btn-sm"
+                      onclick="updateWithdraw(${row.id},'Rejected')">Reject</button>`
+                  : '-'}
+              </td>
+            </tr>
+          `;
+        });
+
+      } else {
+        html = `
+          <tr>
+            <td colspan="8" class="text-center text-muted">
+              No data available
+            </td>
+          </tr>
+        `;
+      }
+
+      $("#withdrawTable tbody").html(html);
+
+    }
+  });
+
+}
+
+
+function updateWithdraw(id, status) {
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You want to " + status + " this request",
+    icon: "warning",
+    showCancelButton: true
+  }).then((result) => {
+
+    if (result.isConfirmed) {
+
+      $.ajax({
+        url: "/admin/admin-withdraw-update",
+        type: "POST",
+        headers: {
+          "CSRF-Token": csrfToken
+        },
+        data: { id, status },
+        success: function (res) {
+
+          if (res.success) {
+            Swal.fire("Updated", "", "success");
+            loadWithdrawData();
+          }
+
+        }
+      });
+
+    }
+
+  });
+
+}
+</script>
+
+
+<script>
+
+$(document).ready(function(){
+
+    const userId = "<%= user.id %>";
+
+    loadWinningHistory(userId);
+
+    $("#winningDate").on("change", function(){
+
+        loadWinningHistory(userId, $(this).val());
+
+    });
+
+});
+
+
+
+
+
+function loadWinningHistory(userId, date=''){
+
+    $.ajax({
+
+        url: "/admin/winning-history/" + userId,
+
+        type: "GET",
+
+        data:{
+            date: date
+        },
+
+        success:function(res){
+
+            let html = '';
+
+            if(res.status && res.data.length){
+
+                res.data.forEach((v,i)=>{
+
+                    html += `
+                    <tr>
+
+                        <td>${i+1}</td>
+
+                        <td>${v.txn_id ?? '-'}</td>
+
+                        <td>${v.game_name ?? '-'}</td>
+
+                        <td>${v.game_type ?? '-'}</td>
+
+                        <td>${v.session ?? '-'}</td>
+
+                        <td>
+                            ${v.pana }
+                        </td>
+
+                        <td class="text-success fw-bold">
+                            ₹${v.amount ?? 0}
+                        </td>
+
+                        <td>${v.date ?? '-'}</td>
+
+                    </tr>
+                    `;
+                });
+
+            }else{
+
+                html = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted">
+                        No Winning Data Found
+                    </td>
+                </tr>
+                `;
+            }
+
+            $("#winningBody").html(html);
+
+        }
+
+    });
+
+}
+
+</script>

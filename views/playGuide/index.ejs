@@ -1,0 +1,51 @@
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <div class="pull-left">
+      <div class="page-title">How To Play</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form id="playGuideForm">
+
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label>How To Play Content</label>
+        <textarea id="formsummernote" name="des"><%= data.des %></textarea>
+      </div>
+
+      <div class="form-group mt-3">
+        <label>Video Link</label>
+        <input
+          type="text"
+          class="form-control"
+          name="video_link"
+          value="<%= data.video_link %>"
+          placeholder="Enter video link"
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary px-5 mt-3">
+        Update
+      </button>
+
+    </form>
+  </div>
+</div>
+
+<script>
+$("#playGuideForm").on("submit", function(e) {
+  e.preventDefault();
+
+  $.post("/admin/play-guide/update", $(this).serialize(), function(res) {
+    if (res.res === "success") {
+      Swal.fire("Success", res.msg, "success");
+    } else {
+      Swal.fire("Error", res.msg, "error");
+    }
+  });
+});
+</script>

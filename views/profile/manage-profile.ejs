@@ -1,0 +1,168 @@
+
+
+    <div class="page-content-wrapper">
+      <div class="page-content">
+
+        <!-- PAGE BAR -->
+        <div class="page-bar">
+          <div class="page-title-breadcrumb">
+            <!-- <div class="pull-left">
+              <div class="page-title">User Profile</div>
+            </div> -->
+            <ol class="breadcrumb page-breadcrumb pull-right">
+              <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin/dashboard">Home</a>
+                <i class="fa fa-angle-right"></i>
+              </li>
+              <li class="active">User Profile</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12">
+
+            <!-- PROFILE SIDEBAR -->
+            <div class="profile-sidebar">
+              <div class="card">
+                <div class="card-body no-padding height-9">
+
+                  <div class="profile-userpic">
+                    <img src="<%= admin.image %>" class="img-responsive"  style="height:100px;width:120px" alt="">
+                  </div>
+
+                  <div class="profile-usertitle">
+                    <div class="profile-usertitle-name"><%= admin.name %></div>
+                    <div class="profile-usertitle-job"><%= admin.username %></div>
+                  </div>
+
+                  <ul class="list-group list-group-unbordered">
+                    <li class="list-group-item">
+                      <b>Email</b> <span class="pull-right"><%= admin.email %></span>
+                    </li>
+                    <li class="list-group-item">
+                      <b>Mobile</b> <span class="pull-right"><%= admin.mobile %></span>
+                    </li>
+                    <li class="list-group-item">
+                      <b>Address</b> <span class="pull-right"><%= admin.address %></span>
+                    </li>
+                  </ul>
+
+                  <div class="profile-userbuttons">
+                    <button class="btn btn-circle red btn-sm" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                      Change Password
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+            <!-- END SIDEBAR -->
+
+            <!-- PROFILE CONTENT -->
+            <div class="profile-content">
+              <div class="card">
+                <div class="card-head">
+                  <header>User Activity</header>
+                </div>
+
+                <div class="card-body">
+                  <form id="profileForm" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                    <div class="row">
+                      <div class="form-group col-md-6 mb-4">
+                        <label>Name</label>
+                        <input class="form-control" name="name" value="<%= admin.name %>">
+                      </div>
+
+                      <div class="form-group col-md-6 mb-4">
+                        <label>Email</label>
+                        <input class="form-control" name="email" value="<%= admin.email %>">
+                      </div>
+
+                      <div class="form-group col-md-6 mb-4">
+                        <label>Mobile</label>
+                        <input class="form-control" name="mobile" value="<%= admin.mobile %>">
+                      </div>
+
+                      <div class="form-group col-md-6 mb-4">
+                        <label>Profile Image</label>
+                        <input type="file" class="form-control" name="image">
+                      </div>
+
+                      <div class="form-group col-md-12 mb-4">
+                        <label>Address</label>
+                        <input class="form-control" name="address" value="<%= admin.address %>">
+                      </div>
+
+                      <div class="form-group col-md-12">
+                        <button class="btn btn-circle red btn-sm px-5">
+                          Update Profile
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+            <!-- END CONTENT -->
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+    
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal fade" id="exampleModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Change Password</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="passwordForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <input class="form-control mb-3" name="npass" placeholder="New Password">
+          <input class="form-control mb-3" name="cpass" placeholder="Confirm Password">
+
+          <button class="btn btn-primary">Change</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<script>
+$("#profileForm").submit(function(e){
+  e.preventDefault();
+  let data = new FormData(this);
+
+  $.ajax({
+    url: "/admin/update-profile",
+    method: "POST",
+    data,
+    processData:false,
+    contentType:false,
+    success: res => {
+      Swal.fire(res.res, res.msg, res.res);
+      if(res.res === "success") location.reload();
+    }
+  });
+});
+
+$("#passwordForm").submit(function(e){
+  e.preventDefault();
+  $.post("/admin/change-password", $(this).serialize(), res => {
+    Swal.fire(res.res, res.msg, res.res);
+    if(res.res === "success") location.href="/admin/logout";
+  });
+});
+</script>

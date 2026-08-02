@@ -1,0 +1,73 @@
+<!-- PAGE BAR -->
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <ol class="breadcrumb page-breadcrumb pull-right">
+      <li>
+        <i class="fa fa-home"></i>
+        <a class="parent-item" href="/admin">Home</a>
+        <i class="fa fa-angle-right"></i>
+      </li>
+      <li class="active">Update Starline Game Rate</li>
+    </ol>
+  </div>
+</div>
+
+
+
+<div class="row">
+  <div class="col-sm-12">
+
+
+
+
+
+<div class="card">
+  <div class="card-header">
+    <h4>Update Starline Game Rate</h4>
+  </div>
+<div class="card-body">
+
+<form id="starlineRateForm">
+<input type="hidden" name="id" value="<%= data.id %>">
+
+<div class="row">
+
+<% const fields = [
+  ["single_digit", "Single Digit"],
+  ["single_pana", "Single Pana"],
+  ["double_pana", "Double Pana"],
+  ["tripple_pana", "Tripple Pana"]
+]; %>
+
+<% fields.forEach(f => { %>
+  <div class="col-md-6">
+    <label><%= f[1] %> Value 1</label>
+    <input
+      type="text"
+      class="form-control mb-3"
+      name="<%= f[0] %>1"
+      value="<%= data[f[0]+'1'] %>">
+  </div>
+
+  <div class="col-md-6">
+    <label><%= f[1] %> Value 2</label>
+    <input
+      type="text"
+      class="form-control mb-3"
+      name="<%= f[0] %>2"
+      value="<%= data[f[0]+'2'] %>">
+  </div>
+<% }) %>
+
+</div>
+
+<button class="btn btn-primary mt-3">
+  Update <i class="fa fa-spinner fa-spin d-none" id="loader"></i>
+</button>
+</form>
+
+</div>
+</div>
+
+</div>
+</div>

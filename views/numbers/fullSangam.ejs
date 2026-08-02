@@ -1,0 +1,43 @@
+<style>
+.digit_num_box{
+  border:1px solid #34c38f;
+  border-radius:4px;
+  background-color:rgba(52,195,143,.18);
+  width:45px;
+  height:45px;
+  margin:10px 20px;
+  font-weight:600;
+}
+</style>
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <div class="pull-left">
+      <div class="page-title">Full Sangam Number</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+
+    <h4 class="card-title">Full Sangam Numbers</h4>
+
+    <h5>Open Ank</h5>
+    <div>
+      <% openNumbers.forEach(num => { %>
+        <button class="digit_num_box"><%= String(num).padStart(3,'0') %></button>
+      <% }) %>
+    </div>
+
+    <hr>
+
+    <h5>Close Ank</h5>
+    <div>
+      <% openNumbers.forEach(num => { %>
+        <button class="digit_num_box"><%= String(num).padStart(3,'0') %></button>
+      <% }) %>
+    </div>
+
+  </div>
+</div>

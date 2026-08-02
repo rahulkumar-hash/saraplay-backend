@@ -1,0 +1,21 @@
+<style>
+.digit_num_box{
+  border:1px solid #34c38f;
+  border-radius:4px;
+  background-color:rgba(52,195,143,.18);
+  width:40px;
+  height:40px;
+  margin:10px 20px;
+  font-weight:600;
+}
+</style>
+
+<div class="page-title">Jodi Digit Numbers</div>
+
+<div>
+  <% for(let i=0;i<=99;i++){ %>
+    <button class="digit_num_box">
+      <%= i.toString().padStart(2,'0') %>
+    </button>
+  <% } %>
+</div>

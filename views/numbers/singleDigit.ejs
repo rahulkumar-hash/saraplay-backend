@@ -1,0 +1,31 @@
+<style>
+.digit_num_box{
+  border:1px solid #34c38f;
+  border-radius:4px;
+  background-color:rgba(52,195,143,.18);
+  width:40px;
+  height:40px;
+  margin:10px 20px;
+  font-weight:600;
+}
+</style>
+
+<div class="page-bar">
+  <div class="page-title-breadcrumb">
+    <div class="pull-left">
+      <div class="page-title">Single Digit Number</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h4 class="card-title">Single Digit Numbers</h4>
+
+    <div>
+      <% digits.forEach(d => { %>
+        <button class="digit_num_box"><%= d %></button>
+      <% }) %>
+    </div>
+  </div>
+</div>

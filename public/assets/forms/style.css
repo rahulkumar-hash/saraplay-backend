@@ -1,0 +1,17 @@
+/* Validation error highlight */
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.is-valid {
+    border-color: #198754 !important;
+}
+
+/* input-group ke liye */
+.input-group .is-invalid {
+    z-index: 2;
+}
+
+.sidebar .sidebar-menu, .settings-sidebar .sidebar-menu {
+    padding: 10px  !important;
+}

@@ -1,0 +1,445 @@
+
+<!-- PAGE BAR -->
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+      
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li>
+                <i class="fa fa-home"></i>
+                <a class="parent-item" href="/admin">Home</a>
+                <i class="fa fa-angle-right"></i>
+            </li>
+            <li class="active">User Bid History</li>
+        </ol>
+    </div>
+</div>
+
+<!-- FILTER CARD -->
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Bid History Report</h4>
+
+                <div class="row">
+
+                    <div class="form-group col-md-2">
+                        <label>Date</label>
+                        <input type="date" id="filter_date" class="form-control digits">
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label>Game Name</label>
+                        <select id="filter_game_list" class="form-control">
+                            <option value="">-Select Game Name-</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label>Game Type</label>
+                        <select id="filter_type" class="form-control">
+                            <option value="">-Select Game Type-</option>
+                            <option value="all">All Type</option>
+                            <option value="Single Digit">Single Digit</option>
+                            <option value="Jodi Digit">Jodi Digit</option>
+                            <option value="Single Pana">Single Pana</option>
+                            <option value="Double Pana">Double Pana</option>
+                            <option value="Tripple Pana">Triple Pana</option>
+                            <option value="Half Sangam">Half Sangam</option>
+                            <option value="Full Sangam">Full Sangam</option>
+                        </select>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="bidTableNew" class="table table-striped table-bordered w-100">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>#</th>
+                                <th>User Mobile</th>
+                                <th>Bid TXN ID</th>
+                                <th>Game Name</th>
+                                <th>Game Type</th>
+                                <th>Session</th>
+                                <th>Open Paana	</th>
+                                <th>Open Digit	</th>
+                                <th>Close Paana	</th>
+                                <th>Close Digit	</th>
+                                <th>Jodi Digit	</th>
+                                <th>Points</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        
+                        <tbody id="bidBody">
+
+                        <% if (data && data.length) { %>
+
+                            <% data.forEach(function(v, i){ 
+                                
+                                const formatted = new Date(v.date).toLocaleString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: true
+                                }); 
+
+                            %>
+
+                                <tr>
+                                    <td><%= i+1 %></td>
+
+                                    <td>
+                                        <a 
+                                            href="/admin/SingleUser/<%= v.user_id %>" 
+                                            target="_blank"
+                                            class="text-primary font-weight-bold"
+                                        >
+                                            <%= v.mobile %>
+                                        </a>
+                                    </td>
+
+                                    <td><%= v.bid_txn_id %></td>
+                                    <td><%= v.game_name %></td>
+                                    <td><%= v.game_type %></td>
+                                    <td><%= v.session %></td>
+
+                                    <td><%= v.open_paana %></td>
+                                    <td><%= v.open_digit %></td>
+                                    <td><%= v.close_paana %></td>
+                                    <td><%= v.close_digit %></td>
+                                    <td><%= v.jodi_digit %></td>
+
+                                    <td><%= v.points %></td>
+
+                                    <td>
+                                        <%= formatted %>
+                                    </td>
+                                </tr>
+
+                            <% }) %>
+
+                        <% } %>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+
+    /* ======================
+       SET TODAY
+    ====================== */
+    const now = new Date();
+    const day = ("0" + now.getDate()).slice(-2);
+    const month = ("0" + (now.getMonth() + 1)).slice(-2);
+    const today = now.getFullYear() + "-" + month + "-" + day;
+
+    $('#filter_date').val(today).attr("max", today);
+
+    /* ======================
+       LOAD INITIAL DATA
+    ====================== */
+    loadGames();
+    // loadBids();
+
+    /* ======================
+       FILTER ON CHANGE
+    ====================== */
+    $('#filter_date, #filter_game_list, #filter_type').on('change', function () {
+        loadBids();
+    });
+
+    /* ======================
+       DATATABLE INIT
+    ====================== */
+    // $('#bidTable').DataTable({
+    //     processing: true,
+    //     responsive: false,
+    //     lengthMenu: [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, "All"]],
+    //     dom:
+    //         "<'row'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4'B><'col-sm-12 col-md-4'f>>" +
+    //         "<'row'<'col-sm-12'tr>>" +
+    //         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+    //     buttons: ["copy", "csv", "excel", "pdf", "print"]
+    // });
+
+
+    $('#bidTableNew').DataTable({
+        processing: true,
+        responsive: false,
+        lengthMenu: [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, "All"]]
+    });
+
+
+});
+
+/* ======================
+   LOAD GAMES
+====================== */
+function loadGames() {
+    $.get('/admin/get-games-for-declare', function (res) {
+        let html = '<option value="">-Select Game Name-</option>';
+        res.forEach(g => {
+            html += `<option value="${g.id}">${g.name}</option>`;
+        });
+        $('#filter_game_list').html(html);
+    });
+}
+
+/* ======================
+   LOAD BIDS
+====================== */
+
+function loadBids() {
+
+    if ($.fn.DataTable.isDataTable('#bidTableNew')) {
+        $('#bidTableNew').DataTable().destroy();
+    }
+
+    $.post('/admin/search-bid-history', {
+        date: $('#filter_date').val(),
+        game_id: $('#filter_game_list').val(),
+        game_type: $('#filter_type').val()
+    }, function (res) {
+
+        let html = '';
+
+        if (res.status && res.data.length) {
+
+            res.data.forEach((v, i) => {
+
+                // SAFE DATE FORMAT
+                const cleanDate = v.date
+                    ? v.date.split('.')[0]
+                    : '';
+
+                const formatted = cleanDate
+                    ? new Date(cleanDate).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    })
+                    : '';
+
+                html += `
+                <tr>
+                    <td>${i + 1}</td>
+
+                    <td>
+                        <a 
+                            href="/admin/SingleUser/${v.user_id || ''}" 
+                            target="_blank"
+                            class="text-primary font-weight-bold"
+                        >
+                            ${v.mobile || ''}
+                        </a>
+                    </td>
+
+                    <td>${v.bid_txn_id || ''}</td>
+
+                    <td>${v.game_name || ''}</td>
+
+                    <td>${v.game_type || ''}</td>
+
+                    <td>${v.session || ''}</td>
+
+                    <td>${v.open_paana || ''}</td>
+
+                    <td>${v.open_digit || ''}</td>
+
+                    <td>${v.close_paana || ''}</td>
+
+                    <td>${v.close_digit || ''}</td>
+
+                    <td>${v.jodi_digit || ''}</td>
+
+                    <td>${v.points || ''}</td>
+
+                    <td>${formatted}</td>
+                </tr>
+                `;
+            });
+
+        } else {
+
+            html = `
+                <tr>
+                    <td colspan="13" class="text-center text-danger">
+                        No record found
+                    </td>
+                </tr>
+            `;
+        }
+
+        $('#bidBody').html(html);
+
+        $('#bidTableNew').DataTable({
+            processing: true,
+            responsive: false,
+            destroy: true,
+            lengthMenu: [
+                [10, 25, 50, 100, 500, -1],
+                [10, 25, 50, 100, 500, "All"]
+            ]
+        });
+
+    }).fail(function () {
+
+        $('#bidBody').html(`
+            <tr>
+                <td colspan="13" class="text-center text-danger">
+                    Something went wrong
+                </td>
+            </tr>
+        `);
+
+    });
+}
+
+// function loadBids() {
+    
+//     if ($.fn.DataTable.isDataTable('#bidTableNew')) {
+//         $('#bidTableNew').DataTable().destroy();
+//     }
+
+//     $.post('/admin/search-bid-history', {
+//         date: $('#filter_date').val(),
+//         game_id: $('#filter_game_list').val(),
+//         game_type: $('#filter_type').val()
+//     }, function (res) {
+
+//         let html = '';
+
+//         if (res.status && res.data.length) {
+//             res.data.forEach((v, i) => {
+
+//                 const formatted = new Date(v.date).toLocaleString('en-IN', {
+//                     day: '2-digit',
+//                     month: 'short',
+//                     year: 'numeric',
+//                     hour: '2-digit',
+//                     minute: '2-digit',
+//                     second: '2-digit',
+//                     hour12: true
+//                 }); 
+
+//                 html += `
+//                 <tr>
+//                     <td>${i + 1}</td>
+//                     <td>
+//                         <a 
+//                             href="/admin/SingleUser/${v.user_id}" 
+//                             target="_blank"
+//                             class="text-primary font-weight-bold"
+//                         >
+//                             ${v.mobile}
+//                         </a>
+//                     </td>
+//                     <td>${v.bid_txn_id}</td>
+//                     <td>${v.game_name}</td>
+//                     <td>${v.game_type}</td>
+//                     <td>${v.session}</td>
+//                     <td>${v.open_paana}</td>
+//                     <td>${v.open_digit}</td>
+//                     <td>${v.close_paana}</td>
+//                     <td>${v.close_digit}</td>
+//                     <td>${v.jodi_digit}</td>
+//                     <td>${v.points}</td>
+//                     <td>${formatted}</td>
+//                 </tr>
+//                 `;
+//             });
+//         } else {
+//             html = `
+//                 <tr>
+//                     <td colspan="13" class="text-center text-danger">
+//                         No record found
+//                     </td>
+//                 </tr>
+//             `;
+//         }
+
+//         $('#bidBody').html(html);
+
+//         $('#bidTableNew').DataTable({
+//             processing: true,
+//             responsive: false,
+//             lengthMenu: [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, "All"]]
+//         });
+
+//     });
+// }
+
+
+
+
+
+
+
+
+// function loadBids() {
+//     $.post('/admin/search-bid-history', {
+//         date: $('#filter_date').val(),
+//         game_id: $('#filter_game_list').val(),
+//         game_type: $('#filter_type').val()
+//     }, function (res) {
+
+//         let html = '';
+
+//         if (res.status && res.data.length) {
+//             res.data.forEach((v, i) => {
+//                 html += `
+//                 <tr>
+//                     <td>${i + 1}</td>
+//                     <td>${v.mobile}</td>
+//                     <td>${v.bid_txn_id}</td>
+//                     <td>${v.game_name}</td>
+//                     <td>${v.game_type}</td>
+//                     <td>${v.session}</td>
+//                     <td>${v.open_paana}</td>
+//                     <td>${v.open_digit}</td>
+//                     <td>${v.close_paana}</td>
+//                     <td>${v.close_digit}</td>
+//                     <td>${v.jodi_digit}</td>
+//                     <td>${v.points}</td>
+//                     <td>${v.game_date}</td>
+//                 </tr>
+//                 `;
+//             });
+//         } else {
+//             html = `
+//                 <tr>
+//                     <td colspan="13" class="text-center text-danger">
+//                         No record found
+//                     </td>
+//                 </tr>
+//             `;
+//         }
+
+//         $('#bidBody').html(html);
+//     });
+// }
+</script>

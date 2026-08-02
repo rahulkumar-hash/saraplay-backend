@@ -1,0 +1,130 @@
+<div class="page-bar">
+    <div class="page-title-breadcrumb">
+        <div class="pull-left">
+            <div class="page-title">Bid Revert</div>
+        </div>
+        <ol class="breadcrumb page-breadcrumb pull-right">
+            <li><a href="/admin/dashboard">Home</a></li>
+            <li class="active">Bid Revert</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card mb-3">
+<div class="card-body">
+<h4 class="card-title">Bid Revert</h4>
+
+<div class="row">
+<div class="col-md-4">
+    <label>Date</label>
+    <input type="date" id="result_date" class="form-control">
+</div>
+
+<div class="col-md-4">
+    <label>Game Name</label>
+    <select id="game_id" class="form-control"></select>
+</div>
+
+<div class="col-md-4 mt-4">
+    <button class="btn btn-primary w-100" onclick="searchBid()">Submit</button>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="card">
+<div class="card-head">
+<header>
+<button id="refundBtn" class="btn btn-danger d-none">Clear & Refund All</button>
+</header>
+</div>
+
+<div class="card-body">
+<table class="table table-bordered" id="bidTable">
+<thead>
+<tr>
+    <th>#</th>
+    <th>User</th>
+    <th>Points</th>
+    <th>Type</th>
+</tr>
+</thead>
+<tbody id="bidBody"></tbody>
+</table>
+</div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+
+    const today = new Date().toISOString().slice(0,10);
+    $('#result_date').val(today).attr("max", today);
+
+    loadGames();
+});
+
+function loadGames(){
+    $.get('/admin/get-games-for-declare', res=>{
+        let html = '<option disabled selected>Select Game</option>';
+        res.forEach(g=>{
+            html += `<option value="${g.id}">${g.name}</option>`;
+        });
+        $('#game_id').html(html);
+    });
+}
+
+function searchBid(){
+    $.post('/admin/bid-revert/search',{
+        result_date: $('#result_date').val(),
+        game: $('#game_id').val()
+    },res=>{
+        let html = '';
+
+        if(res.status && res.data.length){
+            $('#refundBtn').removeClass('d-none')
+              .off()
+              .on('click',()=>refundAll(
+                res.data[0].game_id,
+                res.data[0].game_date
+              ));
+
+            res.data.forEach((v,i)=>{
+                html += `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${v.name}<br>(${v.mobile})</td>
+                    <td>${v.points}</td>
+                    <td>${v.game_type}</td>
+                </tr>`;
+            });
+        }else{
+            $('#refundBtn').addClass('d-none');
+            html = `<tr><td colspan="4" class="text-center text-danger">No Data Found</td></tr>`;
+        }
+
+        $('#bidBody').html(html);
+    });
+}
+
+function refundAll(game_id, game_date){
+    Swal.fire({
+        title: "Are you sure?",
+        text: "This will refund all bids",
+        icon: "warning",
+        showCancelButton: true
+    }).then(r=>{
+        if(r.isConfirmed){
+            $.post('/admin/bid-revert/refund',{game_id,game_date},res=>{
+                Swal.fire(res.msg);
+                if(res.status==="success"){
+                    $('#bidBody').html('');
+                    $('#refundBtn').addClass('d-none');
+                }
+            });
+        }
+    });
+}
+
+</script>
