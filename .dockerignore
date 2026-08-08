@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+
+.env
+.env.*
+
+.git
+.gitignore
+
+Dockerfile
+docker-compose.yml
+
+*.log
+sara23032025-firebase-adminsdk-*.json

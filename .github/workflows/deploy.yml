@@ -1,0 +1,46 @@
+name: Saraplay Backend Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+
+          script: |
+            set -e
+
+            cd /var/www/SARAPLAY-BACKEND
+
+            echo "Pull latest code..."
+            git fetch origin
+            git reset --hard origin/main
+
+            echo "Building Docker image..."
+            docker build -t saraplay-backend:latest .
+
+            echo "Restarting backend container..."
+            docker stop saraplay-backend || true
+            docker rm -f saraplay-backend || true
+
+            docker run -d \
+              --restart always \
+              --name saraplay-backend \
+              -p 3003:3003 \
+              --env-file /var/www/SARAPLAY-BACKEND/.env \
+              saraplay-backend:latest
+
+            docker image prune -f

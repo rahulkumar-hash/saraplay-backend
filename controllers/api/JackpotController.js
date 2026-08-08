@@ -1095,7 +1095,7 @@ exports.jackpotGameChart = async (req,res)=>{
 
    try {
 
-    const { user_id, date } = req.body;
+   const { user_id, date } = req.body || {};
 
     const game_date = date
       ? new Date(date).toISOString().slice(0,10)
