@@ -32,15 +32,26 @@ jobs:
             echo "Building Docker image..."
             docker build -t saraplay-backend:latest .
 
-            echo "Restarting backend container..."
+            echo "Stopping old backend..."
             docker stop saraplay-backend || true
             docker rm -f saraplay-backend || true
+
+            echo "Starting backend..."
 
             docker run -d \
               --restart always \
               --name saraplay-backend \
+              --network saraplay-network \
+              --env-file /var/www/SARAPLAY-BACKEND/.env.production \
+              -v /var/www/SARAPLAY-BACKEND/firebase.json:/app/firebase.json:ro \
               -p 3003:3003 \
-              --env-file /var/www/SARAPLAY-BACKEND/.env \
               saraplay-backend:latest
+
+            echo "Checking backend..."
+            sleep 5
+            docker ps --filter "name=saraplay-backend"
+
+            echo "Backend logs..."
+            docker logs saraplay-backend --tail 50
 
             docker image prune -f

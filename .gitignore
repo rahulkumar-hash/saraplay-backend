@@ -8,6 +8,10 @@ node_modules/
 
 # Firebase service account
 sara23032025-firebase-adminsdk-fbsvc-abdb14a71b.json
+firebase.json
+
+# VPS data
+postgres-data/
 
 # Logs
 logs
