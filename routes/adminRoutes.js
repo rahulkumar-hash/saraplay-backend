@@ -32,7 +32,7 @@ const ProfileController = require("../controllers/ProfileController");
 const upload = require("../middleware/upload");
 const fileupload = require("../middleware/upload");
 
-const LoginController = require("../controllers/LoginController");
+
 
 const csrfProtection = csrf({
    cookie: true
@@ -605,7 +605,7 @@ router.post("/change-pin", authMiddleware, ProfileController.changePin);
 
 
 // Route ------------------------------------------------------------------------------------------------------>
-router.get("/login", csrfProtection, LoginController.loginPage);
+
 
 router.get("/logout", csrfProtection,authMiddleware, AdminController.logout);
 module.exports = router;
