@@ -317,7 +317,7 @@ exports.getHowToPlay = async (req, res) => {
 exports.winHistory = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { from_date, to_date, page = 1, limit = 10 } = req.body || {};
+    const { from_date, page = 1, limit = 10 } = req.body || {};
 
     if (!userId) {
       return res.json({
@@ -326,14 +326,9 @@ exports.winHistory = async (req, res) => {
       });
     }
 
-    date = from_date;
-
     const currentPage = parseInt(page);
     const perPage = parseInt(limit);
     const offset = (currentPage - 1) * perPage;
-
-    // ✅ Default date handling
-    const fromDate = date || new Date().toISOString().split("T")[0];
 
     const formatDate = (inputDate) => {
       const d = new Date(inputDate);
@@ -343,7 +338,9 @@ exports.winHistory = async (req, res) => {
       return `${day} ${month} ${year}`;
     };
 
-    const formattedDate = formatDate(fromDate);
+    // ✅ Date filter is optional now — only applied when from_date is passed
+    const hasDateFilter = !!from_date;
+    const formattedDate = hasDateFilter ? formatDate(from_date) : null;
 
     // ✅ Check user exists
     const userCheck = await dbQuery(`SELECT id FROM users WHERE id = $1`, [
@@ -357,12 +354,18 @@ exports.winHistory = async (req, res) => {
       });
     }
 
+    const dateFilterClause = hasDateFilter ? `AND date = $2` : "";
+    const dateFilterClauseJoin = hasDateFilter ? `AND w.date = $2` : "";
+
     // ✅ Total count
+    const countParams = hasDateFilter ? [userId, formattedDate] : [userId];
+
     const countQuery = await dbQuery(
-      `SELECT COUNT(*) 
-       FROM win_history 
-       WHERE date = $1 AND user_id = $2`,
-      [formattedDate, userId],
+      `SELECT COUNT(*)
+       FROM win_history
+       WHERE user_id = $1
+       ${dateFilterClause}`,
+      countParams,
     );
 
     const total = parseInt(countQuery.rows[0].count);
@@ -375,14 +378,21 @@ exports.winHistory = async (req, res) => {
     }
 
     // ✅ Paginated data with JOIN
+    const historyParams = hasDateFilter
+      ? [userId, formattedDate, perPage, offset]
+      : [userId, perPage, offset];
+
+    const limitOffsetPlaceholders = hasDateFilter ? `$3 OFFSET $4` : `$2 OFFSET $3`;
+
     const historyQuery = await dbQuery(
       `SELECT w.*, g.name AS game_name
        FROM win_history w
        LEFT JOIN game g ON g.id = w.game_id
-       WHERE w.date = $1 AND w.user_id = $2
+       WHERE w.user_id = $1
+       ${dateFilterClauseJoin}
        ORDER BY w.id DESC
-       LIMIT $3 OFFSET $4`,
-      [formattedDate, userId, perPage, offset],
+       LIMIT ${limitOffsetPlaceholders}`,
+      historyParams,
     );
 
     const result = historyQuery.rows.map((row) => ({
