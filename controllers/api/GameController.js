@@ -413,9 +413,7 @@ exports.bidHistory = async (req, res) => {
     const userId = req.user?.id;
     const { from, to, page = 1, limit = 10 } = req.body || {};
 
-    
-
-    if (!userId || !from || !to) {
+    if (!userId) {
       return res.json({
         status: false,
         message: "Missing Parameters",
@@ -426,13 +424,10 @@ exports.bidHistory = async (req, res) => {
     const perPage = parseInt(limit);
     const offset = (currentPage - 1) * perPage;
 
-   
     // User Check
     const userCheck = await dbQuery(`SELECT id FROM users WHERE id = $1`, [
       userId,
     ]);
-
-    console.log("User Check:", userCheck.rows);
 
     if (userCheck.rows.length === 0) {
       return res.json({
@@ -441,60 +436,39 @@ exports.bidHistory = async (req, res) => {
       });
     }
 
-    // Latest bids of this user
-    const latestBid = await dbQuery(
-      `SELECT *
-       FROM user_bid
-       WHERE user_id = $1
-       ORDER BY id DESC
-       LIMIT 5`,
-      [userId],
-    );
+    // Build date filter dynamically — only applied when both from & to are passed
+    const hasDateFilter = !!(from && to);
 
-  
+    const filterClause = hasDateFilter ? `AND ub.game_date BETWEEN $2 AND $3` : "";
+    const countFilterClause = hasDateFilter ? `AND game_date BETWEEN $2 AND $3` : "";
 
-    // Without Date Filter
-    const onlyUser = await dbQuery(
-      `SELECT *
-       FROM user_bid
-       WHERE user_id = $1`,
-      [userId],
-    );
-
-    
-
-    // With Date Filter
-    const matchedRows = await dbQuery(
-      `SELECT *
-       FROM user_bid
-       WHERE user_id = $1
-       AND game_date BETWEEN $2 AND $3`,
-      [userId, from, to]
-    );
-
- 
+    // Params for count query
+    const countParams = hasDateFilter ? [userId, from, to] : [userId];
 
     // Count
     const countQuery = await dbQuery(
       `SELECT COUNT(*)
        FROM user_bid
        WHERE user_id = $1
-       AND game_date BETWEEN $2 AND $3`,
-      [userId, from, to]
+       ${countFilterClause}`,
+      countParams
     );
-
-    
 
     const total = parseInt(countQuery.rows[0].count);
 
     if (total === 0) {
-      console.log("❌ History Not Found");
-
       return res.json({
         status: false,
         message: "History Not Found",
       });
     }
+
+    // Params for main bid query (limit/offset always last)
+    const bidParams = hasDateFilter
+      ? [userId, from, to, perPage, offset]
+      : [userId, perPage, offset];
+
+    const limitOffsetPlaceholders = hasDateFilter ? `$4 OFFSET $5` : `$2 OFFSET $3`;
 
     const bidQuery = await dbQuery(
       `SELECT ub.*,
@@ -503,13 +477,11 @@ exports.bidHistory = async (req, res) => {
        FROM user_bid ub
        LEFT JOIN game g ON g.id = ub.game_id
        WHERE ub.user_id = $1
-       AND ub.game_date BETWEEN $2 AND $3
+       ${filterClause}
        ORDER BY ub.id DESC
-       LIMIT $4 OFFSET $5`,
-      [userId, from, to, perPage, offset]
+       LIMIT ${limitOffsetPlaceholders}`,
+      bidParams
     );
-
-  
 
     const result = bidQuery.rows.map((row) => {
       row.game_id = row.game_name;
@@ -527,7 +499,6 @@ exports.bidHistory = async (req, res) => {
 
       return row;
     });
-
 
     return res.json({
       status: true,

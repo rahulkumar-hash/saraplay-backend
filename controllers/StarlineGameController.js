@@ -14,7 +14,7 @@ exports.index = async (req, res) => {
 /* LIST */
 exports.getGames = async (req, res) => {
   const result = await dbQuery(
-    "SELECT * FROM game ORDER BY id DESC"
+    "SELECT * FROM starline_game ORDER BY id DESC"
   );
   res.json({ status: true, csrfToken: req.csrfToken(), data: result.rows });
 };
