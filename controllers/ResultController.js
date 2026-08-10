@@ -576,309 +576,268 @@ SELECT name FROM users WHERE id=$1
 
 
 exports.declareResult = async (req, res) => {
-
   try {
+    const { date, game_id, session, pana, digit } = req.body;
 
-    const { date, game_id, session, pana, digit } = req.body
-
-    const rdate = moment(date).format("DD MMM YYYY")
-    const now = moment().format("DD MMM YYYY hh:mm:ss A")
+    const rdate = moment(date).format("DD MMM YYYY");
+    const now = moment().format("DD MMM YYYY hh:mm:ss A");
 
     if (!date || !game_id || !session || !pana) {
-      return res.json({ res: "error", msg: "Data require" })
+      return res.json({ res: "error", msg: "Data require" });
     }
 
     /* ==============================
     GET RESULT
     ============================== */
-
     const result = await dbQuery(`
-SELECT * FROM declear_result
-WHERE result_date=$1
-AND game_id=$2
-ORDER BY id DESC
-LIMIT 1
-`, [rdate, game_id])
+      SELECT * FROM declear_result
+      WHERE result_date=$1
+      AND game_id=$2
+      ORDER BY id DESC
+      LIMIT 1
+    `, [rdate, game_id]);
 
     if (!result.rows.length) {
-      return res.json({ res: "error", msg: "Result Not Found" })
+      return res.json({ res: "error", msg: "Result Not Found" });
     }
 
-    const data = result.rows[0]
+    const data = result.rows[0];
+
+    // Support both DD MMM YYYY and YYYY-MM-DD date formats in user_bid
+    const date1 = data.result_date;
+    const date2 = moment(data.result_date, ["DD MMM YYYY", "YYYY-MM-DD"]).format("YYYY-MM-DD");
+    const date3 = moment(data.result_date, ["DD MMM YYYY", "YYYY-MM-DD"]).format("DD MMM YYYY");
 
     /* ==============================
     OPEN DECLARE
     ============================== */
-
     if (session === "Open") {
-
       await dbQuery(`
-UPDATE declear_result
-SET
-open_declare_date=$1,
-open_result='Declared'
-WHERE
-result_date=$2
-AND game_id=$3
-`, [
-        now,
-        data.result_date,
-        data.game_id
-      ])
+        UPDATE declear_result
+        SET open_declare_date=$1, open_result='Declared'
+        WHERE result_date=$2 AND game_id=$3
+      `, [now, data.result_date, data.game_id]);
 
       /* WINNER CHECK */
-
       const bids = await dbQuery(`
-SELECT * FROM user_bid
-WHERE
-game_date=$1
-AND session='Open'
-AND game_id=$2
-ORDER BY id DESC
-`, [
-        data.result_date,
-        data.game_id
-      ])
+        SELECT * FROM user_bid
+        WHERE (game_date = $1 OR game_date = $2 OR game_date = $3)
+        AND session='Open'
+        AND game_id=$4
+        ORDER BY id DESC
+      `, [date1, date2, date3, data.game_id]);
+
+      console.log(`[Open Declare] Found ${bids.rows.length} bids for game ${data.game_id} on date ${date1}`);
 
       for (const v of bids.rows) {
+        const panaVal = String(v.pana || "").trim();
+        const openDigitVal = String(data.open_digit || "").trim();
+        const openPanaVal = String(data.open_pana || "").trim();
+        const gameType = String(v.game_type || "").trim();
 
         if (
-          (v.pana === data.open_digit && v.game_type === "Single Digit") ||
-          (v.pana === data.open_pana && v.game_type === "Single Pana") ||
-          (v.pana === data.open_pana && v.game_type === "Double Pana") ||
-          (v.pana === data.open_pana && v.game_type === "Tripple Pana")
+          (panaVal === openDigitVal && (gameType === "Single Digit" || gameType === "Single")) ||
+          (panaVal === openPanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP")) ||
+          (panaVal === openPanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP")) ||
+          (panaVal === openPanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP"))
         ) {
-
-          await creditWallet(v, data)
-
+          console.log(`[Open Winner Found] User ${v.user_id} - ${gameType} - Pana/Digit: ${v.pana}`);
+          await creditWallet(v, data);
         }
-
       }
 
-      const game = await dbQuery(`
-        SELECT name
-        FROM game
-        WHERE id = $1
-        `, [
-            data.game_id
-        ]);
+      const game = await dbQuery(`SELECT name FROM game WHERE id = $1`, [data.game_id]);
+      var title = data.open_pana + '-' + data.open_digit + '*-***';
+      var body = (game.rows[0]?.name || 'Game') + ' Result';
 
-      var title = data.open_pana+'-'+data.open_digit+'*-***';
-      var body = game.rows[0]?.name+' Result'
+      try {
+        await sendAll("all", title, body);
+      } catch (fcmErr) {
+        console.error("FCM Broadcast Error:", fcmErr);
+      }
 
-      await sendAll(
-        "all",
-        title,
-        body
-      );
-
-
-
-
-
-      return res.json({
-        res: "success",
-        msg: "Result Declared"
-      })
-
+      return res.json({ res: "success", msg: "Result Declared" });
     }
 
     /* ==============================
     CLOSE DECLARE
     ============================== */
-
     if (session === "Close") {
-
       if (!data.open_declare_date) {
-        return res.json({
-          res: "error",
-          msg: "Declare Open Result First"
-        })
+        return res.json({ res: "error", msg: "Declare Open Result First" });
       }
 
       await dbQuery(`
-UPDATE declear_result
-SET
-close_declare_date=$1,
-close_result='Declared'
-WHERE
-result_date=$2
-AND game_id=$3
-`, [
-        now,
-        data.result_date,
-        data.game_id
-      ])
+        UPDATE declear_result
+        SET close_declare_date=$1, close_result='Declared'
+        WHERE result_date=$2 AND game_id=$3
+      `, [now, data.result_date, data.game_id]);
 
       const bids = await dbQuery(`
-SELECT * FROM user_bid
-WHERE
-game_date=$1
-AND game_id=$2
-ORDER BY id DESC
-`, [
-        data.result_date,
-        data.game_id
-      ])
+        SELECT * FROM user_bid
+        WHERE (game_date = $1 OR game_date = $2 OR game_date = $3)
+        AND game_id = $4
+        ORDER BY id DESC
+      `, [date1, date2, date3, data.game_id]);
 
-      const jodi = data.open_digit + data.close_digit
-      const half1 = data.open_digit + data.close_pana
-      const half2 = data.open_pana + data.close_digit
-      const full = data.open_pana + data.close_pana
+      console.log(`[Close Declare] Found ${bids.rows.length} bids for game ${data.game_id} on date ${date1}`);
+
+      const jodi = String(data.open_digit || "") + String(data.close_digit || "");
+      const half1 = String(data.open_digit || "") + String(data.close_pana || "");
+      const half2 = String(data.open_pana || "") + String(data.close_digit || "");
+      const full = String(data.open_pana || "") + String(data.close_pana || "");
 
       for (const v of bids.rows) {
+        const panaVal = String(v.pana || "").trim();
+        const closePanaVal = String(data.close_pana || "").trim();
+        const closeDigitVal = String(data.close_digit || "").trim();
+        const gameType = String(v.game_type || "").trim();
 
-        if (
-          v.pana === data.close_pana ||
-          v.pana === data.close_digit ||
-          v.pana === full
-        ) {
+        let isWinner = false;
 
-          await creditWallet(v, data)
-
-        }
-
-        if (v.pana === jodi) {
-          await creditWallet(v, data)
-        }
-
-        if (v.game_type === "Half Sangam") {
-          if (v.pana === half1 || v.pana === half2) {
-            await creditWallet(v, data)
+        if (v.session === "Close") {
+          if (
+            (panaVal === closeDigitVal && (gameType === "Single Digit" || gameType === "Single")) ||
+            (panaVal === closePanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP")) ||
+            (panaVal === closePanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP")) ||
+            (panaVal === closePanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP"))
+          ) {
+            isWinner = true;
           }
         }
 
+        if (gameType === "Jodi Digit" || gameType === "Jodi") {
+          if (panaVal === jodi.trim()) isWinner = true;
+        }
+
+        if (gameType === "Half Sangam") {
+          if (panaVal === half1.trim() || panaVal === half2.trim()) isWinner = true;
+        }
+
+        if (gameType === "Full Sangam") {
+          if (panaVal === full.trim()) isWinner = true;
+        }
+
+        if (isWinner) {
+          console.log(`[Close Winner Found] User ${v.user_id} - ${gameType} - Pana/Digit: ${v.pana}`);
+          await creditWallet(v, data);
+        }
       }
 
+      const game = await dbQuery(`SELECT name FROM game WHERE id = $1`, [data.game_id]);
+      var title = data.open_pana + '-' + data.open_digit + '' + data.close_digit + '-' + data.close_pana;
+      var body = (game.rows[0]?.name || 'Game') + ' Result';
 
-       const game = await dbQuery(`
-        SELECT name
-        FROM game
-        WHERE id = $1
-        `, [
-            data.game_id
-        ]);
+      try {
+        await sendAll("all", title, body);
+      } catch (fcmErr) {
+        console.error("FCM Broadcast Error:", fcmErr);
+      }
 
-      var title = data.open_pana+'-'+data.open_digit+''+data.close_digit+'-'+data.close_pana;
-      var body = game.rows[0]?.name+' Result'
-
-      await sendAll(
-        "all",
-        title,
-        body
-      );
-
-
-      return res.json({
-        res: "success",
-        msg: "Result Declared"
-      })
-
+      return res.json({ res: "success", msg: "Result Declared" });
     }
 
   } catch (err) {
-
-    console.log(err)
-
-    res.json({
-      res: "error",
-      msg: "Server Error"
-    })
-
+    console.error("Declare Result Error:", err);
+    res.json({ res: "error", msg: "Server Error" });
   }
-
-}
-
-
-
-
-
-
-
-
+};
 
 async function creditWallet(bid, result) {
+  try {
+    const txn_id = Math.floor(10000000 + Math.random() * 90000000);
+    const user_id = bid.user_id;
+    let amount = Number(bid.win_amount) || 0;
 
-  const txn_id = Math.floor(Math.random() * 99999999)
+    // Fallback calculation if win_amount is missing or zero
+    if (amount <= 0 && Number(bid.points) > 0) {
+      const points = Number(bid.points);
+      const gType = String(bid.game_type || "");
+      if (gType.includes("Single Digit") || gType === "Single") amount = points * 9.5;
+      else if (gType.includes("Jodi")) amount = points * 95;
+      else if (gType.includes("Single Pana") || gType.includes("SP")) amount = points * 140;
+      else if (gType.includes("Double Pana") || gType.includes("DP")) amount = points * 280;
+      else if (gType.includes("Tripple Pana") || gType.includes("TP")) amount = points * 600;
+      else if (gType.includes("Half Sangam")) amount = points * 1000;
+      else if (gType.includes("Full Sangam")) amount = points * 10000;
+      else amount = points * 9.5;
+    }
+    amount = Math.round(amount);
 
-  const user_id = bid.user_id
-  const amount = Number(bid.win_amount)
-  const now = moment().format("DD MMM YYYY hh:mm:ss A")
+    if (amount <= 0) return;
 
-  const last = await dbQuery(`
-SELECT * FROM wallet
-WHERE user_id=$1
-ORDER BY id DESC
-LIMIT 1
-`, [user_id])
+    const now = moment().format("DD MMM YYYY hh:mm:ss A");
 
-  let opening = 0
-  let closing = amount
+    const last = await dbQuery(`
+      SELECT txn_clbal FROM wallet
+      WHERE user_id=$1
+      ORDER BY id DESC
+      LIMIT 1
+    `, [user_id]);
 
-  if (last.rows.length) {
+    let opening = 0;
+    if (last.rows.length) {
+      opening = Number(last.rows[0].txn_clbal) || 0;
+    }
+    let closing = opening + amount;
 
-    opening = Number(last.rows[0].txn_clbal) || 0
-    closing = opening + amount
+    console.log(`💰 Crediting Wallet | User: ${user_id} | Opening: ${opening} | Amount: ${amount} | Closing: ${closing}`);
 
-  }
-
-  console.log(closing);
-
-  await dbQuery(`
-INSERT INTO wallet
-(
-user_id,
-txn_opbal,
-txn_crdt,
-txn_dbdt,
-txn_clbal,
-txn_comment,
-txn_date,
-transfer_user_id,
-transaction_id
-)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-`, [
-    user_id,
-    opening,
-    amount,
-    0,
-    closing,
-    "Winning Amount",
-    now,
-    "Admin",
-    txn_id
-  ])
-
-  await dbQuery(`
-    INSERT INTO win_history
-    (
-    user_id,
-    game_id,
-    game_type,
-    session,
-    game_date,
-    txn_id,
-    pana,
-    points,
-    amount,
-    date
-    )
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    await dbQuery(`
+      INSERT INTO wallet
+      (user_id, txn_opbal, txn_crdt, txn_dbdt, txn_clbal, txn_comment, txn_date, transfer_user_id, transaction_id)
+      VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `, [
-        bid.user_id,
-        result.game_id,
-        bid.game_type,
-        bid.session,
-        result.result_date,
-        txn_id,
-        bid.pana,
-        bid.points,
-        amount,
-        moment().format("DD MMM YYYY")
-    ])
+      user_id,
+      opening,
+      amount,
+      0,
+      closing,
+      "Winning Amount",
+      now,
+      "Admin",
+      txn_id
+    ]);
 
-}
+    try {
+      await dbQuery(`UPDATE "users" SET wallet = COALESCE(wallet, 0) + $1 WHERE id = $2`, [amount, user_id]);
+    } catch (uErr) {
+      // Ignore if users.wallet column does not exist
+    }
+
+    await dbQuery(`
+      INSERT INTO win_history
+      (user_id, game_id, game_type, session, game_date, txn_id, pana, points, amount, date)
+      VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
+      bid.user_id,
+      result.game_id,
+      bid.game_type,
+      bid.session,
+      result.result_date,
+      txn_id,
+      bid.pana,
+      bid.points,
+      amount,
+      moment().format("DD MMM YYYY")
+    ]);
+
+    try {
+      const userRes = await dbQuery(`SELECT fcm_token FROM "users" WHERE id = $1 LIMIT 1`, [user_id]);
+      if (userRes.rows.length > 0 && userRes.rows[0].fcm_token) {
+        await sendSingleNotification(
+          userRes.rows[0].fcm_token,
+          "Congratulations! 🥳 You Won!",
+          `You won ₹${amount} in ${bid.game_type} (${bid.session})!`
+        );
+      }
+    } catch (notifErr) {
+      console.error("Winner FCM Notification Error:", notifErr);
+    }
+  } catch (err) {
+    console.error("creditWallet Error:", err);
+  }
+};
 
 
 
