@@ -272,7 +272,7 @@ exports.placedBid = async (req, res) => {
 
          let session = val.session || "";
 
-         const value = val.value || "";
+         const value = (val.value !== undefined && val.value !== null) ? String(val.value) : "";
 
          let winAmount = 0;
 

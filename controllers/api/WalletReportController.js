@@ -455,11 +455,10 @@ exports.getWithdrawHistory = async (req, res) => {
 
 
 
-
 exports.walletTransaction = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { page = 1, limit = 20 } = req.body || {};
+    const { page = 1, limit = 20, type } = req.body || {};
 
     if (!userId) {
       return res.json({
@@ -485,10 +484,20 @@ exports.walletTransaction = async (req, res) => {
       });
     }
 
+    // ✅ Build filter dynamically - default = both debit & credit
+    let typeFilter = "";
+    const queryParams = [userId];
+
+    if (type && ["debit", "credit"].includes(type.toLowerCase())) {
+      typeFilter = `AND type = $${queryParams.length + 1}`;
+      queryParams.push(type.toLowerCase());
+    }
+    // agar type nahi bheja ya invalid bheja -> filter hi nahi lagega -> sab aayega
+
     // ✅ Total count
     const countQuery = await dbQuery(
-      "SELECT COUNT(*) FROM wallet WHERE user_id = $1",
-      [userId]
+      `SELECT COUNT(*) FROM wallet WHERE user_id = $1 ${typeFilter}`,
+      queryParams
     );
 
     const total = parseInt(countQuery.rows[0].count);
@@ -500,14 +509,14 @@ exports.walletTransaction = async (req, res) => {
       });
     }
 
-    // ✅ Paginated transactions
+    // ✅ Paginated transactions (debit + credit both by default)
     const walletQuery = await dbQuery(
       `SELECT *
        FROM wallet
-       WHERE user_id = $1
+       WHERE user_id = $1 ${typeFilter}
        ORDER BY id DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, perPage, offset]
+       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+      [...queryParams, perPage, offset]
     );
 
     return res.json({
