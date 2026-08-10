@@ -579,16 +579,23 @@ exports.declareResult = async (req, res) => {
   try {
     const { date, game_id, session, pana, digit } = req.body;
 
+    console.log("\n==========================================");
+    console.log(`🚀 [DECLARE RESULT REQUEST] Date: ${date} | Game ID: ${game_id} | Session: ${session} | Pana: ${pana} | Digit: ${digit}`);
+    console.log("==========================================");
+
     const rdate = moment(date).format("DD MMM YYYY");
     const now = moment().format("DD MMM YYYY hh:mm:ss A");
 
     if (!date || !game_id || !session || !pana) {
+      console.log("❌ Declare Result Failed: Missing parameters");
       return res.json({ res: "error", msg: "Data require" });
     }
 
     /* ==============================
     GET RESULT
     ============================== */
+    console.log(`🔍 Searching declear_result table for Date: '${rdate}' & Game ID: ${game_id}...`);
+
     const result = await dbQuery(`
       SELECT * FROM declear_result
       WHERE result_date=$1
@@ -598,10 +605,12 @@ exports.declareResult = async (req, res) => {
     `, [rdate, game_id]);
 
     if (!result.rows.length) {
+      console.log(`❌ No declear_result record found for Date: '${rdate}' & Game ID: ${game_id}`);
       return res.json({ res: "error", msg: "Result Not Found" });
     }
 
     const data = result.rows[0];
+    console.log(`✅ Result Row Found: Open Pana: ${data.open_pana}, Open Digit: ${data.open_digit}, Close Pana: ${data.close_pana}, Close Digit: ${data.close_digit}`);
 
     // Support both DD MMM YYYY and YYYY-MM-DD date formats in user_bid
     const date1 = data.result_date;
@@ -612,6 +621,8 @@ exports.declareResult = async (req, res) => {
     OPEN DECLARE
     ============================== */
     if (session === "Open") {
+      console.log(`📢 Declaring OPEN session for Game ID: ${data.game_id}...`);
+
       await dbQuery(`
         UPDATE declear_result
         SET open_declare_date=$1, open_result='Declared'
@@ -619,6 +630,8 @@ exports.declareResult = async (req, res) => {
       `, [now, data.result_date, data.game_id]);
 
       /* WINNER CHECK */
+      console.log(`🔎 Querying user_bid for Open session | Dates: ['${date1}', '${date2}', '${date3}'] | Game ID: ${data.game_id}`);
+
       const bids = await dbQuery(`
         SELECT * FROM user_bid
         WHERE (game_date = $1 OR game_date = $2 OR game_date = $3)
@@ -627,13 +640,16 @@ exports.declareResult = async (req, res) => {
         ORDER BY id DESC
       `, [date1, date2, date3, data.game_id]);
 
-      console.log(`[Open Declare] Found ${bids.rows.length} bids for game ${data.game_id} on date ${date1}`);
+      console.log(`📋 Total OPEN Bids Found: ${bids.rows.length}`);
 
+      let winnerCount = 0;
       for (const v of bids.rows) {
         const panaVal = String(v.pana || "").trim();
         const openDigitVal = String(data.open_digit || "").trim();
         const openPanaVal = String(data.open_pana || "").trim();
         const gameType = String(v.game_type || "").trim();
+
+        console.log(`   👉 Checking Bid #${v.id} | User ID: ${v.user_id} | Type: '${gameType}' | Pana/Digit: '${panaVal}' | Points: ${v.points}`);
 
         if (
           (panaVal === openDigitVal && (gameType === "Single Digit" || gameType === "Single")) ||
@@ -641,10 +657,15 @@ exports.declareResult = async (req, res) => {
           (panaVal === openPanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP")) ||
           (panaVal === openPanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP"))
         ) {
-          console.log(`[Open Winner Found] User ${v.user_id} - ${gameType} - Pana/Digit: ${v.pana}`);
+          winnerCount++;
+          console.log(`   🎉 [OPEN WINNER MATCHED!] User ID: ${v.user_id} | Type: ${gameType} | Pana: ${panaVal}`);
           await creditWallet(v, data);
+        } else {
+          console.log(`   ❌ No Match for Bid #${v.id}`);
         }
       }
+
+      console.log(`✅ OPEN Session Completed. Total Winners Credited: ${winnerCount}`);
 
       const game = await dbQuery(`SELECT name FROM game WHERE id = $1`, [data.game_id]);
       var title = data.open_pana + '-' + data.open_digit + '*-***';
@@ -652,8 +673,9 @@ exports.declareResult = async (req, res) => {
 
       try {
         await sendAll("all", title, body);
+        console.log(`📲 Broadcast Notification Sent: ${title}`);
       } catch (fcmErr) {
-        console.error("FCM Broadcast Error:", fcmErr);
+        console.error("❌ FCM Broadcast Error:", fcmErr);
       }
 
       return res.json({ res: "success", msg: "Result Declared" });
@@ -664,14 +686,19 @@ exports.declareResult = async (req, res) => {
     ============================== */
     if (session === "Close") {
       if (!data.open_declare_date) {
+        console.log("❌ Close Declare Failed: Open result not declared yet");
         return res.json({ res: "error", msg: "Declare Open Result First" });
       }
+
+      console.log(`📢 Declaring CLOSE session for Game ID: ${data.game_id}...`);
 
       await dbQuery(`
         UPDATE declear_result
         SET close_declare_date=$1, close_result='Declared'
         WHERE result_date=$2 AND game_id=$3
       `, [now, data.result_date, data.game_id]);
+
+      console.log(`🔎 Querying user_bid for Close session | Dates: ['${date1}', '${date2}', '${date3}'] | Game ID: ${data.game_id}`);
 
       const bids = await dbQuery(`
         SELECT * FROM user_bid
@@ -680,13 +707,16 @@ exports.declareResult = async (req, res) => {
         ORDER BY id DESC
       `, [date1, date2, date3, data.game_id]);
 
-      console.log(`[Close Declare] Found ${bids.rows.length} bids for game ${data.game_id} on date ${date1}`);
+      console.log(`📋 Total CLOSE Bids Found: ${bids.rows.length}`);
 
       const jodi = String(data.open_digit || "") + String(data.close_digit || "");
       const half1 = String(data.open_digit || "") + String(data.close_pana || "");
       const half2 = String(data.open_pana || "") + String(data.close_digit || "");
       const full = String(data.open_pana || "") + String(data.close_pana || "");
 
+      console.log(`🎯 Winning Patterns -> Jodi: '${jodi}', Half1: '${half1}', Half2: '${half2}', Full: '${full}'`);
+
+      let winnerCount = 0;
       for (const v of bids.rows) {
         const panaVal = String(v.pana || "").trim();
         const closePanaVal = String(data.close_pana || "").trim();
@@ -718,11 +748,18 @@ exports.declareResult = async (req, res) => {
           if (panaVal === full.trim()) isWinner = true;
         }
 
+        console.log(`   👉 Checking Bid #${v.id} | User ID: ${v.user_id} | Type: '${gameType}' | Session: '${v.session}' | Pana/Digit: '${panaVal}' | Points: ${v.points}`);
+
         if (isWinner) {
-          console.log(`[Close Winner Found] User ${v.user_id} - ${gameType} - Pana/Digit: ${v.pana}`);
+          winnerCount++;
+          console.log(`   🎉 [CLOSE WINNER MATCHED!] User ID: ${v.user_id} | Type: ${gameType} | Pana: ${panaVal}`);
           await creditWallet(v, data);
+        } else {
+          console.log(`   ❌ No Match for Bid #${v.id}`);
         }
       }
+
+      console.log(`✅ CLOSE Session Completed. Total Winners Credited: ${winnerCount}`);
 
       const game = await dbQuery(`SELECT name FROM game WHERE id = $1`, [data.game_id]);
       var title = data.open_pana + '-' + data.open_digit + '' + data.close_digit + '-' + data.close_pana;
@@ -730,15 +767,16 @@ exports.declareResult = async (req, res) => {
 
       try {
         await sendAll("all", title, body);
+        console.log(`📲 Broadcast Notification Sent: ${title}`);
       } catch (fcmErr) {
-        console.error("FCM Broadcast Error:", fcmErr);
+        console.error("❌ FCM Broadcast Error:", fcmErr);
       }
 
       return res.json({ res: "success", msg: "Result Declared" });
     }
 
   } catch (err) {
-    console.error("Declare Result Error:", err);
+    console.error("❌ Declare Result Server Error:", err);
     res.json({ res: "error", msg: "Server Error" });
   }
 };
@@ -764,7 +802,10 @@ async function creditWallet(bid, result) {
     }
     amount = Math.round(amount);
 
-    if (amount <= 0) return;
+    if (amount <= 0) {
+      console.log(`⚠️ Credit Skipped: Win Amount is 0 for User ID: ${user_id}`);
+      return;
+    }
 
     const now = moment().format("DD MMM YYYY hh:mm:ss A");
 
@@ -781,7 +822,11 @@ async function creditWallet(bid, result) {
     }
     let closing = opening + amount;
 
-    console.log(`💰 Crediting Wallet | User: ${user_id} | Opening: ${opening} | Amount: ${amount} | Closing: ${closing}`);
+    console.log("------------------------------------------");
+    console.log(`💰 [CREDITING WALLET] User ID: ${user_id} | Game Type: ${bid.game_type} | Points: ${bid.points}`);
+    console.log(`💰 Calculated Win Amount: ₹${amount}`);
+    console.log(`💰 Opening Balance: ₹${opening} -> New Closing Balance: ₹${closing}`);
+    console.log("------------------------------------------");
 
     await dbQuery(`
       INSERT INTO wallet
@@ -801,6 +846,7 @@ async function creditWallet(bid, result) {
 
     try {
       await dbQuery(`UPDATE "users" SET wallet = COALESCE(wallet, 0) + $1 WHERE id = $2`, [amount, user_id]);
+      console.log(`✅ Updated users table wallet column for User ID: ${user_id}`);
     } catch (uErr) {
       // Ignore if users.wallet column does not exist
     }
@@ -822,6 +868,8 @@ async function creditWallet(bid, result) {
       moment().format("DD MMM YYYY")
     ]);
 
+    console.log(`✅ Win History Recorded for User ID: ${user_id}`);
+
     try {
       const userRes = await dbQuery(`SELECT fcm_token FROM "users" WHERE id = $1 LIMIT 1`, [user_id]);
       if (userRes.rows.length > 0 && userRes.rows[0].fcm_token) {
@@ -830,12 +878,15 @@ async function creditWallet(bid, result) {
           "Congratulations! 🥳 You Won!",
           `You won ₹${amount} in ${bid.game_type} (${bid.session})!`
         );
+        console.log(`📲 Winner FCM Notification Sent to User ID: ${user_id}`);
+      } else {
+        console.log(`ℹ️ FCM Token missing for User ID: ${user_id}, skipped FCM notification`);
       }
     } catch (notifErr) {
-      console.error("Winner FCM Notification Error:", notifErr);
+      console.error("❌ Winner FCM Notification Error:", notifErr);
     }
   } catch (err) {
-    console.error("creditWallet Error:", err);
+    console.error("❌ creditWallet Execution Error:", err);
   }
 };
 
