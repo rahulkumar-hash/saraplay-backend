@@ -167,7 +167,7 @@ exports.sendNotification = async (req, res) => {
     /* =====================================
        🔔 SEND TO ALL USERS
     ===================================== */
-    if (send_all == 1 || user_id === "all" || !user_id) {
+    if (send_all == 1 || user_id === "all" || !user_id || String(user_id).trim() === "" || user_id === "undefined") {
 
       // ✅ Save DB
       await dbQuery(
