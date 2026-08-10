@@ -59,6 +59,13 @@ exports.store = async (req, res) => {
       VALUES ($1, $2, $3, $4)
     `, [title, des, noticeDate, createdAt]);
 
+    // Also trigger FCM broadcast notification when notice is added
+    try {
+      await sendAll("all", title, des);
+    } catch (fcmErr) {
+      console.error("FCM Notice Broadcast Error:", fcmErr);
+    }
+
     res.json({
       res: "success",
       msg: "Notice Added Successfully"
@@ -71,15 +78,33 @@ exports.store = async (req, res) => {
 };
 
 
+/* =========================
+   DELETE NOTICE
+========================= */
+exports.delete = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await dbQuery(
+      `DELETE FROM notice WHERE id=$1`,
+      [id]
+    );
+
+    res.json({
+      res: "success",
+      msg: "Notice deleted successfully"
+    });
+
+  } catch (err) {
+    console.error("Notice delete error:", err);
+    res.json({ res: "error", msg: "Something went wrong" });
+  }
+};
 
 
-
-
-
-
-
-
-
+/* =========================
+   SEND NOTIFICATION PAGE
+========================= */
 exports.sendNotificationPage = async (req, res) => {
   try {
     res.render("notice/send-notification", {
@@ -126,8 +151,6 @@ exports.searchUser = async (req, res) => {
    SEND NOTIFICATION (POST)
 ========================= */
 
-
-
 exports.sendNotification = async (req, res) => {
 
   try {
@@ -144,7 +167,7 @@ exports.sendNotification = async (req, res) => {
     /* =====================================
        🔔 SEND TO ALL USERS
     ===================================== */
-    if (send_all == 1 || user_id === "all") {
+    if (send_all == 1 || user_id === "all" || !user_id) {
 
       // ✅ Save DB
       await dbQuery(
@@ -156,35 +179,13 @@ exports.sendNotification = async (req, res) => {
         [title, body]
       );
 
-      await sendAll(
+      const response = await sendAll(
         "all",
         title,
         body
       );
 
-      // console.log(res1);
-
-      // ✅ Get all tokens
-      // const tokenResult = await dbQuery(`
-      //   SELECT fcm_token
-      //   FROM "users"
-      //   WHERE fcm_token IS NOT NULL
-      //   AND fcm_token != ''
-      // `);
-
-      // const tokens = tokenResult.rows.map(item => item.fcm_token);
-
-      // // ✅ Firebase send
-      // if (tokens.length > 0) {
-
-      //   // const response = await sendMultiNotification(
-      //   //   tokens,
-      //   //   title,
-      //   //   body
-      //   // );
-
-      //   console.log("Firebase Multi Response:", response);
-      // }
+      console.log("Firebase All Response:", response);
 
     }
 
@@ -227,6 +228,14 @@ exports.sendNotification = async (req, res) => {
         );
 
         console.log("Firebase Single Response:", response);
+      } else {
+        // Fallback broadcast to topic 'all' if user fcm_token is not set in DB
+        const response = await sendAll(
+          "all",
+          title,
+          body
+        );
+        console.log("Firebase Fallback Response:", response);
       }
     }
 
@@ -238,79 +247,10 @@ exports.sendNotification = async (req, res) => {
   } catch (err) {
 
     console.error("SendNotification error:", err);
-
     return res.json({
       res: "error",
-      msg: "Something went wrong"
-    });
-  }
-};
-
-
-
-
-
-
-
-
-
-// exports.sendNotification = async (req, res) => {
-//   try {
-//     const { user_id, send_all, title, body } = req.body;
-
-//     if (!title || !body) {
-//       return res.json({ res: "error", msg: "Title & Description required" });
-//     }
-
-//     // 🔔 Send to ALL users
-//     if (send_all == 1 || user_id === "all") {
-//       await dbQuery(
-//         `
-//         INSERT INTO public.notifications (user_id, title, body, created_at)
-//         SELECT id, $1, $2, NOW()
-//         FROM "users"
-//         `,
-//         [title, body]
-//       );
-
-//     } 
-//     // 🔔 Send to SINGLE user
-//     else {
-//       await dbQuery(
-//         `
-//         INSERT INTO public.notifications (user_id, title, body, created_at)
-//         VALUES ($1, $2, $3, NOW())
-//         `,
-//         [user_id, title, body]
-//       );
-//     }
-
-//     res.json({
-//       res: "success",
-//       msg: "Notification sent successfully"
-//     });
-
-//   } catch (err) {
-//     console.error("SendNotification error:", err);
-//     res.json({ res: "error", msg: "Something went wrong" });
-//   }
-// };
-
-
-
-exports.delete = async (req, res) => {
-  try {
-    const id = req.params.id;
-
-    await dbQuery(`DELETE FROM notice WHERE id = $1`, [id]);
-
-    res.json({
-      res: "success",
-      msg: "Notice deleted successfully"
+      msg: "Failed to send notification"
     });
 
-  } catch (err) {
-    console.error("Delete notice error:", err);
-    res.json({ res: "error", msg: "Something went wrong" });
   }
 };
