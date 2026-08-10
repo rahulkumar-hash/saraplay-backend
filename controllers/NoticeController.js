@@ -152,10 +152,9 @@ exports.searchUser = async (req, res) => {
 ========================= */
 
 exports.sendNotification = async (req, res) => {
-
   try {
-
     const { user_id, send_all, title, body } = req.body;
+    console.log("📢 Admin Notification Received | title:", title, "| body:", body, "| user_id:", user_id, "| send_all:", send_all);
 
     if (!title || !body) {
       return res.json({
@@ -168,7 +167,8 @@ exports.sendNotification = async (req, res) => {
        🔔 SEND TO ALL USERS
     ===================================== */
     if (send_all == 1 || user_id === "all" || !user_id || String(user_id).trim() === "" || user_id === "undefined") {
-
+      console.log("➡️ Routing to ALL USERS topic broadcast...");
+      
       // ✅ Save DB
       await dbQuery(
         `
@@ -185,7 +185,7 @@ exports.sendNotification = async (req, res) => {
         body
       );
 
-      console.log("Firebase All Response:", response);
+      console.log("✅ Firebase Broadcast Response:", response);
 
     }
 
@@ -193,6 +193,7 @@ exports.sendNotification = async (req, res) => {
        🔔 SEND TO SINGLE USER
     ===================================== */
     else {
+      console.log("➡️ Routing to SINGLE USER ID:", user_id);
 
       // ✅ Save DB
       await dbQuery(
@@ -227,15 +228,16 @@ exports.sendNotification = async (req, res) => {
           body
         );
 
-        console.log("Firebase Single Response:", response);
+        console.log("✅ Firebase Single Token Response:", response);
       } else {
+        console.log("⚠️ FCM Token missing for user_id:", user_id, "- Falling back to Broadcast topic...");
         // Fallback broadcast to topic 'all' if user fcm_token is not set in DB
         const response = await sendAll(
           "all",
           title,
           body
         );
-        console.log("Firebase Fallback Response:", response);
+        console.log("✅ Firebase Fallback Response:", response);
       }
     }
 
@@ -246,7 +248,7 @@ exports.sendNotification = async (req, res) => {
 
   } catch (err) {
 
-    console.error("SendNotification error:", err);
+    console.error("❌ SendNotification Error:", err);
     return res.json({
       res: "error",
       msg: "Failed to send notification"
