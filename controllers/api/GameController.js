@@ -3,81 +3,112 @@ const dbQuery = require("../../utils/dbQuery");
 
 // controller/gameController.js
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: Convert "HH:MM AM/PM" string → total minutes since midnight (0–1439)
+// Fix: new Date('1970-01-01 09:22 PM') returns wrong value in Node.js
+//      because it ignores AM/PM and treats as 24h → use manual parser instead
+// ─────────────────────────────────────────────────────────────────────────────
+function timeStrToMinutes(timeStr) {
+  const [time, modifier] = timeStr.trim().split(" ");
+  let [hours, minutes]   = time.split(":").map(Number);
+  if (modifier.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: IST current time string + minutes since midnight
+// ─────────────────────────────────────────────────────────────────────────────
+function getISTTimeMs() {
+  const nowIST  = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+  const timeStr = new Date(nowIST).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return {
+    timeStr,
+    timeMs: timeStrToMinutes(timeStr),   // minutes since midnight (correct AM/PM)
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: resolve active session for a game object
+//   Returns: "open" | "close" | "closed"
+//
+//   Logic:
+//     Before open_time  + open NOT declared    → "open"
+//     After  open_time  + before close_time    → "close"
+//     After  close_time + close NOT declared   → "close"  ← still accept Close bids
+//     After  close_time + close declared       → "closed" ← fully done
+// ─────────────────────────────────────────────────────────────────────────────
+function resolveSessionFromTimes(openTime, closeTime, openDeclared, closeDeclared = false) {
+  const { timeMs } = getISTTimeMs();        // minutes since midnight
+  const openMs     = timeStrToMinutes(openTime);
+  const closeMs    = timeStrToMinutes(closeTime);
+
+  if (timeMs < openMs && !openDeclared) return "open";
+  if (timeMs < closeMs)                  return "close";
+
+  // Past close_time
+  if (!closeDeclared) return "close";   // result not declared yet → still accept Close bids
+  return "closed";                       // result declared → market done
+}
+
+// POST /api/check-game-session
 exports.checkGameSession = async (req, res) => {
   try {
     const game_id = req.body?.game_id || req.query?.game_id || "";
-    let game_type = req.body?.game_type || req.query?.game_type || "open";
 
     if (!game_id) {
-      return res.json({
-        status: false,
-        message: "Game ID missing",
-      });
+      return res.json({ status: false, message: "Game ID missing" });
     }
 
-    // ✅ PostgreSQL query
+    // Fetch game
     const result = await dbQuery("SELECT * FROM game WHERE id = $1", [game_id]);
-
     if (result.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Game not found",
-      });
+      return res.json({ status: false, message: "Game not found" });
     }
-
     const game = result.rows[0];
 
-    // India timezone
-    const now = new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Kolkata",
+    // Today's formatted date (DD Mon YYYY) — same format used in declear_result
+    const todayObj   = new Date();
+    const todayFmt   = `${String(todayObj.getDate()).padStart(2, "0")} ${todayObj.toLocaleString("en-US", { month: "short" })} ${todayObj.getFullYear()}`;
+
+    // Check open & close declaration status today
+    const declareRes = await dbQuery(
+      `SELECT open_declare_date, close_declare_date
+       FROM declear_result
+       WHERE result_date = $1
+         AND game_id     = $2`,
+      [todayFmt, game_id]
+    );
+    const declareRow     = declareRes.rows[0] || {};
+    const open_declared  = !!(declareRow.open_declare_date  && declareRow.open_declare_date  !== "");
+    const close_declared = !!(declareRow.close_declare_date && declareRow.close_declare_date !== "");
+
+    // Resolve active session based on times + declaration status
+    const active_session = resolveSessionFromTimes(
+      game.open_time,
+      game.close_time,
+      open_declared,
+      close_declared
+    );
+
+    const { timeStr: current_time } = getISTTimeMs();
+
+    return res.json({
+      status: true,
+      active_session,          // "open" | "close" | "closed"
+      open_declared,           // boolean
+      close_declared,          // boolean
+      open_time:    game.open_time,
+      close_time:   game.close_time,
+      current_time,
     });
-    const currentDate = new Date(now);
-
-    const currentTimeStr = currentDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-
-    const current_time_sec = new Date(`1970-01-01 ${currentTimeStr}`).getTime();
-
-    let match_time;
-    let message_text;
-
-    if (game_type === "close") {
-      match_time = game.close_time;
-      message_text = "Game Closed";
-      game_type = "close";
-    } else {
-      match_time = game.open_time;
-      message_text = "Game Not Open Yet";
-      game_type = "open";
-    }
-
-    const match_time_sec = new Date(`1970-01-01 ${match_time}`).getTime();
-
-    if (current_time_sec > match_time_sec) {
-      return res.json({
-        status: false,
-        expired: true,
-        game_type,
-        message: message_text,
-        match_time,
-        current_time: currentTimeStr,
-      });
-    } else {
-      return res.json({
-        status: true,
-        expired: false,
-        game_type,
-        message: "Game is valid",
-        match_time,
-        current_time: currentTimeStr,
-      });
-    }
   } catch (error) {
     console.error(error);
-    return res.status(202).json({
+    return res.status(500).json({
       status: false,
       message: "Server Error",
       error: error.message,
@@ -165,6 +196,30 @@ exports.getGames = async (req, res) => {
           game.open_market_status = false;
           // game.market_status = false;
         }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // Dynamic session & market status (Document Section 1 + 3)
+      //   open_declared is already derived above (result != null)
+      // ─────────────────────────────────────────────────────────────────────
+      const openDeclaredForSession = !game.open_market_status && !!result;
+
+      // Resolve live active session
+      const active_session = resolveSessionFromTimes(
+        game.open_time,
+        game.close_time,
+        openDeclaredForSession
+      );
+
+      game.active_session = active_session;
+
+      // close_market_status: true  → close bids accepted
+      //                      false → close session also closed
+      if (active_session === "closed") {
+        game.close_market_status = false;
+      } else {
+        // If close result already declared → close market off
+        game.close_market_status = !(result && result.close_declare_date && result.close_declare_date !== "");
       }
     }
 

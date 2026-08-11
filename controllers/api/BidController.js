@@ -3,6 +3,94 @@ const pool = require("../../config/db");
 const dbQuery = require("../../utils/dbQuery");
 const { sendSingleNotification, sendMultiNotification } = require("../../utils/sendNotification");
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: Convert "HH:MM AM/PM" string → total minutes since midnight (0–1439)
+// Fix: new Date('1970-01-01 09:22 PM') gives wrong result in Node.js
+//      because it ignores AM/PM → use manual parser instead
+// ─────────────────────────────────────────────────────────────────────────────
+function timeStrToMinutes(timeStr) {
+  const [time, modifier] = timeStr.trim().split(" ");
+  let [hours, minutes]   = time.split(":").map(Number);
+  if (modifier.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: resolveActiveSession(game_id)
+//
+// Document Section 1 & 3 logic:
+//   • Group B types (Jodi/Sangam) → caller always forces session = "Close"
+//   • Group A (Single/Pana/Motor):
+//       - Current Time < Open Time AND Open Not Declared → session stays "Open"
+//       - Open Time passed BUT Current Time < Close Time → auto-convert to "Close"
+//                                                          + sets session_adjusted = true
+//       - Current Time >= Close Time                    → returns "closed" (market shut)
+//
+// Returns object:
+//   { active_session: "open"|"close"|"closed", session_adjusted: boolean }
+// ─────────────────────────────────────────────────────────────────────────────
+async function resolveActiveSession(game_id) {
+  const gameRes = await dbQuery(
+    "SELECT open_time, close_time FROM game WHERE id = $1",
+    [game_id]
+  );
+  if (!gameRes.rows.length) return { active_session: "closed", session_adjusted: false };
+
+  const { open_time, close_time } = gameRes.rows[0];
+
+  // IST current time → minutes since midnight (correct AM/PM parsing)
+  const nowIST  = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+  const timeStr = new Date(nowIST).toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
+  const nowMins   = timeStrToMinutes(timeStr);
+  const openMins  = timeStrToMinutes(open_time);
+  const closeMins = timeStrToMinutes(close_time);
+
+  // Check if open result already declared today
+  const todayObj = new Date();
+  const todayFmt = `${String(todayObj.getDate()).padStart(2, "0")} ${todayObj.toLocaleString("en-US", { month: "short" })} ${todayObj.getFullYear()}`;
+
+  const declareRes = await dbQuery(
+    `SELECT open_declare_date, close_declare_date
+     FROM declear_result
+     WHERE result_date = $1
+       AND game_id     = $2`,
+    [todayFmt, game_id]
+  );
+
+  const declareRow    = declareRes.rows[0] || {};
+  const open_declared = !!(declareRow.open_declare_date && declareRow.open_declare_date !== "");
+  const close_declared = !!(declareRow.close_declare_date && declareRow.close_declare_date !== "");
+
+  // ── Resolution logic (minutes comparison — AM/PM safe) ──────────────────
+  //
+  //  Before open_time  + open NOT declared   → "open"   (Open session active)
+  //  After  open_time  + before close_time   → "close"  (Close session active)
+  //  After  close_time + close NOT declared  → "close"  (still accept Close bids)
+  //  After  close_time + close declared      → "closed" (fully done for today)
+  //  Admin market_status = false             → "closed" (checked by caller)
+  //
+  if (nowMins < openMins && !open_declared) {
+    return { active_session: "open", session_adjusted: false };
+  }
+
+  if (nowMins < closeMins) {
+    // open_time passed, close_time not yet → Close session
+    return { active_session: "close", session_adjusted: nowMins >= openMins };
+  }
+
+  // Past close_time — check if close result declared
+  if (!close_declared) {
+    // Close result not yet declared → still accept Close session bids
+    return { active_session: "close", session_adjusted: false };
+  }
+
+  // Close result declared → market fully done
+  return { active_session: "closed", session_adjusted: false };
+}
+
 
 
 
@@ -274,17 +362,71 @@ exports.placedBid = async (req, res) => {
 
          const value = (val.value !== undefined && val.value !== null) ? String(val.value) : "";
 
+         // ─────────────────────────────────────────────────────────────────
+         // Session Resolution (Document Section 1 & 3)
+         //
+         // Group B (Jodi/Sangam) → always force "Close" (handled below)
+         // Group A (Single/Pana/Motor):
+         //   Case 1: User ne session pass nahi kiya
+         //           → active_session se auto-fill karo
+         //   Case 2: User ne session pass kiya + active_session se match
+         //           → allow
+         //   Case 3: User ne session pass kiya + active_session se mismatch
+         //           → reject with descriptive alert message
+         //   Case 4: Market fully closed → reject bid
+         // ─────────────────────────────────────────────────────────────────
+         const GROUP_B_TYPES = ["Jodi Digit", "Red Brackets", "Two Digits Panel", "Group Jodi"];
+         const isGroupB = GROUP_B_TYPES.includes(gameType);
+
+         if (!isGroupB) {
+            // Resolve live active session from DB + IST time
+            const { active_session, session_adjusted } = await resolveActiveSession(gameId);
+
+            // Case 4: Market fully closed → no bidding at all
+            if (active_session === "closed") {
+               await client.query("ROLLBACK");
+               return res.json({
+                  status: false,
+                  message: "Market is closed. Bidding is not allowed at this time."
+               });
+            }
+
+            // Canonical session label matching active_session
+            const expectedSession = active_session === "open" ? "Open" : "Close";
+
+            const userSentSession = val.session ? String(val.session).trim() : "";
+
+            if (!userSentSession) {
+               // Case 1: Session not provided → auto-fill with current active session
+               session = expectedSession;
+               val._session_adjusted = session_adjusted;
+
+            } else if (userSentSession.toLowerCase() === expectedSession.toLowerCase()) {
+               // Case 2: User session matches active session → proceed normally
+               session = expectedSession;
+               val._session_adjusted = false;
+
+            } else {
+               // Case 3: User session mismatches active session → reject with alert
+               await client.query("ROLLBACK");
+               return res.json({
+                  status: false,
+                  session_mismatch: true,
+                  active_session: expectedSession,
+                  sent_session:   userSentSession,
+                  message: `Only ${expectedSession} session is active right now. You sent "${userSentSession}" session which is not allowed.`
+               });
+            }
+         }
+
          let winAmount = 0;
 
          if (["Single Digit", "Odd Even"].includes(gameType)) {
             winAmount = points * singleDigit;
          }
-         else if (
-            ["Jodi Digit", "Red Brackets", "Two Digits Panel", "Group Jodi"]
-            .includes(gameType)
-         ) {
+         else if (isGroupB) {
             winAmount = points * jodiDigit;
-            session = "Close";
+            session = "Close";   // Group B always Close (Document Section 1)
          }
          else if (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP Motor") {
             winAmount = points * singlePana;
@@ -394,9 +536,13 @@ exports.placedBid = async (req, res) => {
 
       await client.query("COMMIT");
 
+      // Check if any bid had its session auto-adjusted (Open → Close)
+      const anyAdjusted = data.some((v) => v._session_adjusted === true);
+
       return res.json({
          status: true,
-         message: "Bid Placed Success"
+         message: "Bid Placed Success",
+         session_adjusted: anyAdjusted,   // true = Open was auto-converted to Close
       });
 
    } catch (error) {
