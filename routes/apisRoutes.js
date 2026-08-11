@@ -197,6 +197,7 @@ router.get("/user/verify",jwtAuth,UtilityController.verifyUser);
 
 
 router.get("/games",  cache(15), GameController.getGames);
+router.get("/games/details", jwtAuth, GameController.getGameDetails);
 router.get("/how-to-play",jwtAuth, GameController.getHowToPlay);
 router.post("/win/history", jwtAuth, GameController.winHistory);
 router.post("/bid/history", jwtAuth, GameController.bidHistory);

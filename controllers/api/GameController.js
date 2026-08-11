@@ -116,6 +116,126 @@ exports.checkGameSession = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/game/details?game_id=xx   OR   POST /api/game/details { game_id }
+// Returns full game details + current session state + today's result status
+// ─────────────────────────────────────────────────────────────────────────────
+exports.getGameDetails = async (req, res) => {
+  try {
+    const game_id = req.query?.game_id || req.body?.game_id || "";
+
+    if (!game_id) {
+      return res.json({ status: false, message: "game_id is required" });
+    }
+
+    // ── 1. Fetch full game row ───────────────────────────────────────────────
+    const gameRes = await dbQuery(
+      `SELECT id, name, hname, open_time, close_time,
+              market_status, closing_day, status
+       FROM game
+       WHERE id = $1`,
+      [game_id]
+    );
+
+    if (!gameRes.rows.length) {
+      return res.json({ status: false, message: "Game not found" });
+    }
+
+    const game = gameRes.rows[0];
+
+    // ── 2. Today formatted (DD Mon YYYY) ────────────────────────────────────
+    const todayObj = new Date();
+    const todayFmt = `${String(todayObj.getDate()).padStart(2, "0")} ${todayObj.toLocaleString("en-US", { month: "short" })} ${todayObj.getFullYear()}`;
+
+    // ── 3. Today's declared result ───────────────────────────────────────────
+    const declareRes = await dbQuery(
+      `SELECT open_declare_date, close_declare_date,
+              open_pana, open_digit,
+              close_pana, close_digit
+       FROM declear_result
+       WHERE result_date = $1
+         AND game_id     = $2`,
+      [todayFmt, game_id]
+    );
+
+    const declareRow     = declareRes.rows[0] || {};
+    const open_declared  = !!(declareRow.open_declare_date  && declareRow.open_declare_date  !== "");
+    const close_declared = !!(declareRow.close_declare_date && declareRow.close_declare_date !== "");
+
+    // ── 4. Current IST time ──────────────────────────────────────────────────
+    const { timeStr: current_time } = getISTTimeMs();
+
+    // ── 5. Check closing day ─────────────────────────────────────────────────
+    const currentDay = todayObj
+      .toLocaleString("en-US", { weekday: "long" })
+      .toLowerCase();
+
+    let is_closing_day = false;
+    if (game.closing_day) {
+      const closingDays = game.closing_day
+        .split(",")
+        .map((d) => d.trim().toLowerCase());
+      is_closing_day = closingDays.includes(currentDay);
+    }
+
+    // ── 6. Resolve active session ────────────────────────────────────────────
+    let active_session;
+    if (game.market_status === false || game.market_status === "false" || game.status !== "true" || is_closing_day) {
+      // Admin manually closed or closing day
+      active_session = "closed";
+    } else {
+      active_session = resolveSessionFromTimes(
+        game.open_time,
+        game.close_time,
+        open_declared,
+        close_declared
+      );
+    }
+
+    // ── 7. Build response ────────────────────────────────────────────────────
+    return res.json({
+      status: true,
+      message: "Game details fetched successfully",
+      result: {
+        // Basic info
+        id:              game.id,
+        name:            game.name,
+        hname:           game.hname,
+
+        // Timing
+        open_time:       game.open_time,
+        close_time:      game.close_time,
+        current_time,
+
+        // Session state
+        active_session,          // "open" | "close" | "closed"
+        open_declared,           // true if open result declared today
+        close_declared,          // true if close result declared today
+
+        // Today's result (empty string if not declared)
+        open_pana:       declareRow.open_pana   || "",
+        open_digit:      declareRow.open_digit  || "",
+        close_pana:      declareRow.close_pana  || "",
+        close_digit:     declareRow.close_digit || "",
+        result_date:     declareRes.rows.length ? todayFmt : null,
+
+        // Market flags
+        market_status:   game.market_status,
+        is_closing_day,
+        game_active:     game.status === "true",
+      },
+    });
+
+  } catch (error) {
+    console.error("getGameDetails Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
 exports.getGames = async (req, res) => {
   try {
     // console.log("Step1");
