@@ -181,6 +181,9 @@ const UtilityController = require("../controllers/api/UtilityController");
 router.get("/apk-update",jwtAuth, cache(60), UtilityController.getApkUpdate);
 router.post("/notification/update",jwtAuth, UtilityController.updateNotificationStatus);
 router.get("/notification/get", jwtAuth,cache(10), UtilityController.getNotifications);
+router.get("/notification/list", jwtAuth, UtilityController.getUserNotifications);
+router.post("/notification/mark-read", jwtAuth, UtilityController.markNotificationRead);
+router.post("/notification/mark-all-read", jwtAuth, UtilityController.markAllNotificationsRead);
 router.post("/fcm/update", jwtAuth,UtilityController.updateFcm);
 router.get("/user/verify",jwtAuth,UtilityController.verifyUser);
 

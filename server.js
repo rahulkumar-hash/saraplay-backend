@@ -225,6 +225,29 @@ app.use(
 );
 
 
+// ================= AUTO MIGRATION =================
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notice_reads (
+                id        SERIAL PRIMARY KEY,
+                user_id   INTEGER NOT NULL,
+                notice_id INTEGER NOT NULL,
+                read_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+                CONSTRAINT uq_user_notice UNIQUE (user_id, notice_id)
+            )
+        `);
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_notice_reads_user_id
+            ON notice_reads (user_id)
+        `);
+        console.log("✅ notice_reads table ready");
+    } catch (err) {
+        console.error("❌ notice_reads migration error:", err.message);
+    }
+})();
+
+
 // ================= ROUTES =================
 app.use(
     "/",

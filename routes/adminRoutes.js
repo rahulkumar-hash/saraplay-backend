@@ -512,6 +512,9 @@ router.post("/jackpot-bid-history/data", csrfProtection, authMiddleware, Jackpot
 
 router.get("/jackpot-declare-result", csrfProtection, authMiddleware, JackpotDeclareResultController.index);
 router.post("/get-jackpot-declare-game", csrfProtection, authMiddleware, JackpotDeclareResultController.getDeclareGame);
+router.post("/get-jackpot-declare-results", csrfProtection, authMiddleware, JackpotDeclareResultController.getDeclareResults);
+router.post("/jackpot-save-result", csrfProtection, authMiddleware, JackpotDeclareResultController.saveResult);
+router.post("/jackpot-declare-result", csrfProtection, authMiddleware, JackpotDeclareResultController.declareResult);
 router.post("/show-jackpot-winner", csrfProtection, authMiddleware, JackpotDeclareResultController.showWinner);
 router.post('/delete-jackpot-declare-result', csrfProtection, authMiddleware, JackpotDeclareResultController.delete);
 

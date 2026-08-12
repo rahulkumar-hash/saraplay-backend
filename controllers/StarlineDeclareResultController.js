@@ -26,6 +26,11 @@ exports.data = async (req, res) => {
   try {
     const { result_date, game_id } = req.body;
 
+    // ✅ Validate — both fields required and game_id must be a valid number
+    if (!result_date || !game_id || isNaN(parseInt(game_id))) {
+      return res.json({ status: false, data: [], msg: "Date and Game required" });
+    }
+
     const result = await dbQuery(`
       SELECT
         r.id,
@@ -39,7 +44,7 @@ exports.data = async (req, res) => {
       WHERE r.result_date = $1
         AND r.game_id = $2
       ORDER BY r.id DESC
-    `, [result_date, game_id]);
+    `, [result_date, parseInt(game_id)]);
 
     res.json({
       status: true,
@@ -60,10 +65,19 @@ exports.getDeclareGame = async (req, res) => {
   try {
     const { date, game_id } = req.body;
 
+    // ✅ Validate
+    if (!date || !game_id || isNaN(parseInt(game_id))) {
+      return res.send("<div class='alert alert-warning'>Please select date &amp; game first.</div>");
+    }
+
     const game = await dbQuery(
       `SELECT * FROM starline_game WHERE id=$1`,
-      [game_id]
+      [parseInt(game_id)]
     );
+
+    if (!game.rows.length) {
+      return res.send("<div class='alert alert-danger'>Game not found.</div>");
+    }
 
     res.render("starlineDeclareResult/declareForm", {
       game: game.rows[0],

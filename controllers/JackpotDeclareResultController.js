@@ -1,20 +1,27 @@
-// const pool = require("../config/db");
-
 const dbQuery = require("../utils/dbQuery");
+const moment  = require("moment");
+const {
+  sendAll,
+  sendSingleNotification
+} = require("../utils/sendNotification");
+
 /* =========================
    PAGE LOAD
+   GET /admin/jackpot-declare-result
 ========================= */
 exports.index = async (req, res) => {
   try {
-
+    // ✅ Only jackpot games — NOT starline
     const games = await dbQuery(`
-      SELECT id, name 
+      SELECT id, name
       FROM jackpot
-      ORDER BY name ASC
+      ORDER BY id ASC
     `);
 
+    console.log("🎰 Jackpot Games in DB:", JSON.stringify(games.rows));
+
     res.render("jackpotDeclareResult/index", {
-      title: "Declare Result",
+      title: "Jackpot Declare Result",
       layout: "layouts/admin",
       games: games.rows,
       csrfToken: req.csrfToken(),
@@ -22,23 +29,106 @@ exports.index = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("DeclareResult index error:", err);
+    console.error("JackpotDeclareResult index error:", err);
     res.status(500).send("Server Error");
   }
 };
 
 
 /* =========================
-   DATATABLE AJAX DATA
+   GET DECLARE FORM (AJAX)
+   POST /admin/get-jackpot-declare-game
+   Body: { date, game_id }
 ========================= */
 exports.getDeclareGame = async (req, res) => {
   try {
-
     const { date, game_id } = req.body;
 
-    let where = ` WHERE 1=1 `;
+    if (!date || !game_id) {
+      return res.json({ html: null, status: false, msg: "Date and Game required" });
+    }
+
+    // Get game name
+    const gameRes = await dbQuery(
+      `SELECT id, name FROM jackpot WHERE id = $1`,
+      [game_id]
+    );
+
+    if (!gameRes.rows.length) {
+      return res.json({ html: null, status: false, msg: "Game not found" });
+    }
+
+    const game = gameRes.rows[0];
+
+    // Check if result already declared for this date+game
+    const existing = await dbQuery(
+      `SELECT * FROM jackpot_declear_result WHERE game_id = $1 AND result_date = $2 LIMIT 1`,
+      [game_id, date]
+    );
+
+    const row = existing.rows[0] || null;
+
+    const currentDigit = row ? (row.result || '') : '';
+    const isDeclared   = row ? !!row.declare_date : false;
+
+    // Build buttons
+    let saveBtn    = '';
+    let declareBtn = '';
+
+    if (!isDeclared) {
+      saveBtn    = `<button type="button" class="btn btn-primary me-2" id="jackpotSaveBtn">Save</button>`;
+      declareBtn = `<button type="button" class="btn btn-success" id="jackpotDeclareBtn">Declare Result</button>`;
+    } else {
+      saveBtn    = `<span class="badge bg-success fs-6 me-2">✅ Already Declared</span>`;
+    }
+
+    const html = `
+      <div class="card mb-3">
+        <div class="card-header"><h5>Declare Result — ${game.name}</h5></div>
+        <div class="card-body">
+          <div class="row align-items-end">
+            <div class="form-group col-md-4">
+              <label><b>Result Digit (0–9)</b></label>
+              <input
+                type="number"
+                id="jackpotDigit"
+                class="form-control form-control-lg"
+                min="0" max="9"
+                placeholder="Enter digit 0-9"
+                value="${currentDigit}"
+                ${isDeclared ? 'readonly' : ''}
+              >
+            </div>
+            <div class="col-md-6 mt-3">
+              ${saveBtn}
+              ${declareBtn}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return res.json({ html, status: true });
+
+  } catch (err) {
+    console.error("getDeclareGame error:", err);
+    return res.json({ html: null, status: false, msg: "Server error" });
+  }
+};
+
+
+/* =========================
+   GET TABLE DATA (AJAX)
+   POST /admin/get-jackpot-declare-results
+   Body: { date, game_id }
+========================= */
+exports.getDeclareResults = async (req, res) => {
+  try {
+    const { date, game_id } = req.body;
+
+    let where  = `WHERE 1=1`;
     let params = [];
-    let i = 1;
+    let i      = 1;
 
     if (date) {
       where += ` AND r.result_date = $${i++}`;
@@ -63,45 +153,229 @@ exports.getDeclareGame = async (req, res) => {
       ORDER BY r.id DESC
     `, params);
 
-    res.json({
+    return res.json({
       status: true,
       csrfToken: req.csrfToken(),
       data: result.rows
     });
 
   } catch (err) {
-    console.error("getDeclareGame error:", err);
-    res.json({
-      status: false,
-      csrfToken: req.csrfToken(),
-      data: []
-    });
+    console.error("getDeclareResults error:", err);
+    return res.json({ status: false, data: [] });
   }
 };
 
 
 /* =========================
-   SHOW WINNER (UNCHANGED)
+   SAVE RESULT (AJAX)
+   POST /admin/jackpot-save-result
+   Body: { date, game_id, result }
 ========================= */
-exports.showWinner = async (req, res) => {
+exports.saveResult = async (req, res) => {
   try {
-    // aapka existing winner logic yahin rahega
-    res.send("Winner logic here");
+    const { date, game_id, result } = req.body;
+
+    if (!date || !game_id || result === undefined || result === '') {
+      return res.json({ res: "error", msg: "All fields required" });
+    }
+
+    const digit = String(result).trim();
+
+    // Validate digit 0-9
+    if (!/^[0-9]$/.test(digit)) {
+      return res.json({ res: "error", msg: "Result must be a single digit (0-9)" });
+    }
+
+    // Check existing
+    const existing = await dbQuery(
+      `SELECT id FROM jackpot_declear_result WHERE game_id = $1 AND result_date = $2`,
+      [game_id, date]
+    );
+
+    if (existing.rows.length) {
+      // Update
+      await dbQuery(
+        `UPDATE jackpot_declear_result SET result = $1 WHERE game_id = $2 AND result_date = $3`,
+        [digit, game_id, date]
+      );
+    } else {
+      // Insert
+      await dbQuery(
+        `INSERT INTO jackpot_declear_result (game_id, result_date, result) VALUES ($1, $2, $3)`,
+        [game_id, date, digit]
+      );
+    }
+
+    return res.json({ res: "success", msg: "Result saved successfully" });
+
   } catch (err) {
-    res.status(500).send("Error");
+    console.error("saveResult error:", err);
+    return res.json({ res: "error", msg: "Server error" });
   }
 };
 
+
+/* =========================
+   DECLARE RESULT (AJAX) — credit winners
+   POST /admin/jackpot-declare-result
+   Body: { date, game_id, result }
+========================= */
+exports.declareResult = async (req, res) => {
+  try {
+    const { date, game_id, result } = req.body;
+
+    console.log(`\n🎰 [JACKPOT DECLARE] Date: ${date} | Game: ${game_id} | Digit: ${result}`);
+
+    if (!date || !game_id || result === undefined || result === '') {
+      return res.json({ res: "error", msg: "All fields required" });
+    }
+
+    const digit = String(result).trim();
+
+    if (!/^[0-9]$/.test(digit)) {
+      return res.json({ res: "error", msg: "Result must be a single digit (0-9)" });
+    }
+
+    // Check if already declared
+    const existing = await dbQuery(
+      `SELECT * FROM jackpot_declear_result WHERE game_id = $1 AND result_date = $2 LIMIT 1`,
+      [game_id, date]
+    );
+
+    if (existing.rows.length && existing.rows[0].declare_date) {
+      return res.json({ res: "error", msg: "Result already declared for this game and date" });
+    }
+
+    const now = moment().format("DD MMM YYYY hh:mm:ss A");
+
+    // Save + mark declared
+    if (existing.rows.length) {
+      await dbQuery(
+        `UPDATE jackpot_declear_result
+         SET result = $1, declare_date = $2
+         WHERE game_id = $3 AND result_date = $4`,
+        [digit, now, game_id, date]
+      );
+    } else {
+      await dbQuery(
+        `INSERT INTO jackpot_declear_result (game_id, result_date, result, declare_date)
+         VALUES ($1, $2, $3, $4)`,
+        [game_id, date, digit, now]
+      );
+    }
+
+    // =====================
+    // CREDIT WINNERS
+    // =====================
+    const bids = await dbQuery(
+      `SELECT * FROM jackpot_bid
+       WHERE game_id = $1 AND game_date = $2`,
+      [game_id, date]
+    );
+
+    console.log(`📋 Total Jackpot Bids Found: ${bids.rows.length}`);
+
+    let winnerCount = 0;
+
+    for (const bid of bids.rows) {
+      const bidDigit = String(bid.bid_on || '').trim();
+
+      if (bidDigit === digit) {
+        winnerCount++;
+        console.log(`🎉 Winner! User ID: ${bid.user_id} | Bid On: ${bidDigit} | Amount: ${bid.win_amount}`);
+        await creditJackpotWallet(bid, game_id, date, digit);
+      }
+    }
+
+    console.log(`✅ Jackpot Declare Done. Winners: ${winnerCount}`);
+
+    // FCM Notification
+    try {
+      const gameRes = await dbQuery(`SELECT name FROM jackpot WHERE id = $1`, [game_id]);
+      const gameName = gameRes.rows[0]?.name || 'Jackpot';
+      await sendAll("all", `Jackpot Result: ${digit}`, `${gameName} Result Declared!`);
+    } catch (fcmErr) {
+      console.error("FCM Error:", fcmErr);
+    }
+
+    return res.json({ res: "success", msg: `Result Declared! ${winnerCount} winner(s) credited.` });
+
+  } catch (err) {
+    console.error("declareResult error:", err);
+    return res.json({ res: "error", msg: "Server error" });
+  }
+};
+
+
+/* =========================
+   SHOW WINNER (AJAX)
+   POST /admin/show-jackpot-winner
+========================= */
+exports.showWinner = async (req, res) => {
+  try {
+    const { game_id, date } = req.body;
+
+    const result = await dbQuery(
+      `SELECT * FROM jackpot_declear_result WHERE game_id = $1 AND result_date = $2 LIMIT 1`,
+      [game_id, date]
+    );
+
+    if (!result.rows.length) {
+      return res.send('<div class="alert alert-warning">No result declared yet.</div>');
+    }
+
+    const digit = result.rows[0].result;
+
+    const bids = await dbQuery(`
+      SELECT b.*, u.mobile
+      FROM jackpot_bid b
+      JOIN "users" u ON u.id = b.user_id
+      WHERE b.game_id = $1 AND b.game_date = $2 AND b.bid_on = $3
+    `, [game_id, date, digit]);
+
+    let html = `
+      <table class="table table-bordered">
+        <thead>
+          <tr><th>#</th><th>Mobile</th><th>Bid On</th><th>Bid Amount</th><th>Win Amount</th></tr>
+        </thead>
+        <tbody>
+    `;
+
+    if (bids.rows.length) {
+      bids.rows.forEach((w, i) => {
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${w.mobile}</td>
+            <td>${w.bid_on}</td>
+            <td>₹${w.bid_amount}</td>
+            <td>₹${w.win_amount}</td>
+          </tr>`;
+      });
+    } else {
+      html += `<tr><td colspan="5" class="text-center text-danger">No winners found</td></tr>`;
+    }
+
+    html += `</tbody></table>`;
+    return res.send(html);
+
+  } catch (err) {
+    console.error("showWinner error:", err);
+    return res.send('<div class="alert alert-danger">Error loading winners.</div>');
+  }
+};
+
+
+/* =========================
+   DELETE RESULT
+   POST /admin/delete-jackpot-declare-result
+========================= */
 exports.delete = async (req, res) => {
   try {
-
     const { id } = req.body;
 
     if (!id) {
-      return res.json({
-        status: false,
-        msg: 'Invalid request'
-      });
+      return res.json({ status: false, msg: "Invalid request" });
     }
 
     await dbQuery(
@@ -109,18 +383,83 @@ exports.delete = async (req, res) => {
       [id]
     );
 
-    res.json({
+    return res.json({
       status: true,
       csrfToken: req.csrfToken(),
-      msg: 'Result deleted successfully'
+      msg: "Result deleted successfully"
     });
 
   } catch (err) {
-    console.error("Delete declare result error:", err);
-    res.json({
-      status: false,
-      csrfToken: req.csrfToken(),
-      msg: 'Something went wrong'
-    });
+    console.error("Delete jackpot result error:", err);
+    return res.json({ status: false, msg: "Something went wrong" });
   }
 };
+
+
+/* =========================
+   HELPER — Credit Jackpot Winner Wallet
+========================= */
+async function creditJackpotWallet(bid, game_id, date, digit) {
+  try {
+    const user_id  = bid.user_id;
+    const amount   = Math.round(Number(bid.win_amount) || 0);
+    const txn_id   = Math.floor(10000000 + Math.random() * 90000000);
+    const now      = moment().format("DD MMM YYYY hh:mm:ss A");
+
+    if (amount <= 0) {
+      console.log(`⚠️ Skip credit — win_amount is 0 for user ${user_id}`);
+      return;
+    }
+
+    // Get last wallet balance
+    const last = await dbQuery(
+      `SELECT txn_clbal FROM wallet WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
+      [user_id]
+    );
+
+    const opening = last.rows.length ? Number(last.rows[0].txn_clbal) : 0;
+    const closing = opening + amount;
+
+    // Insert wallet transaction
+    await dbQuery(`
+      INSERT INTO wallet
+        (user_id, txn_opbal, txn_crdt, txn_dbdt, txn_clbal, txn_comment, txn_date, transfer_user_id, transaction_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `, [user_id, opening, amount, 0, closing, "Jackpot Winning Amount", now, "Admin", txn_id]);
+
+    // Update users wallet column
+    try {
+      await dbQuery(
+        `UPDATE "users" SET wallet = COALESCE(wallet, 0) + $1 WHERE id = $2`,
+        [amount, user_id]
+      );
+    } catch (e) { /* ignore if column missing */ }
+
+    // Insert win history
+    await dbQuery(`
+      INSERT INTO jackpot_win_history
+        (user_id, game_id, game_date, txn_id, bid_on, bid_amount, win_amount, date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [user_id, game_id, date, txn_id, digit, bid.bid_amount, amount, moment().format("DD MMM YYYY")]);
+
+    // Send FCM to winner
+    try {
+      const userRes = await dbQuery(
+        `SELECT fcm_token FROM "users" WHERE id = $1 LIMIT 1`,
+        [user_id]
+      );
+      if (userRes.rows[0]?.fcm_token) {
+        await sendSingleNotification(
+          userRes.rows[0].fcm_token,
+          "🎉 Jackpot Jeet Gaye!",
+          `Aapko ₹${amount} mila! Jackpot Result: ${digit}`
+        );
+      }
+    } catch (fcmErr) {
+      console.error("FCM to winner error:", fcmErr);
+    }
+
+  } catch (err) {
+    console.error("creditJackpotWallet error:", err);
+  }
+}

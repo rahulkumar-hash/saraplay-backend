@@ -24,21 +24,58 @@ exports.getApkUpdate = async (req, res) => {
 
 
 exports.getNotifications = async (req, res) => {
-  const result = await dbQuery(
-    "SELECT * FROM notice ORDER BY id DESC"
-  );
+  try {
+    const user_id = req.user && req.user.id ? req.user.id : null;
 
-  if (result.rows.length > 0) {
-    res.json({
-      status: true,
-      message: "Notifications fetched successfully",
-      data: result.rows
-    });
-  } else {
-    res.json({
+    let result;
+
+    if (user_id) {
+      // ✅ User logged in — return is_read status via LEFT JOIN
+      result = await dbQuery(
+        `SELECT
+           n.id,
+           n.title,
+           n.des,
+           n.status,
+           n.notice_date,
+           n.date,
+           CASE WHEN nr.notice_id IS NOT NULL THEN true ELSE false END AS is_read
+         FROM notice n
+         LEFT JOIN notice_reads nr
+           ON nr.notice_id = n.id AND nr.user_id = $1
+         ORDER BY n.id DESC`,
+        [user_id]
+      );
+    } else {
+      // Fallback — no user, no is_read
+      result = await dbQuery("SELECT * FROM notice ORDER BY id DESC");
+    }
+
+    // ✅ Count unread from fetched data
+    const unreadCount = user_id
+      ? result.rows.filter(n => !n.is_read).length
+      : 0;
+
+    if (result.rows.length > 0) {
+      res.json({
+        status: true,
+        message: "Notifications fetched successfully",
+        unread_count: unreadCount,
+        data: result.rows
+      });
+    } else {
+      res.json({
+        status: false,
+        message: "No notifications found",
+        unread_count: 0,
+        data: []
+      });
+    }
+  } catch (err) {
+    console.error("getNotifications Error:", err);
+    res.status(500).json({
       status: false,
-      message: "No notifications found",
-      data: []
+      message: "Internal server error"
     });
   }
 };
@@ -293,3 +330,164 @@ exports.verifyUser = async (req, res) => {
   }
 };
 
+
+
+/* =============================================
+   🔴 MARK SINGLE NOTIFICATION AS READ
+   POST /api/notification/mark-read
+   Body: { notification_id: 5 }
+   Note: Uses 'notice' table (global broadcast notices)
+         Tracks read status per-user in notice_reads table
+============================================= */
+exports.markNotificationRead = async (req, res) => {
+  try {
+
+    // 🔐 Auth check
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized. Invalid or missing token."
+      });
+    }
+
+    const user_id = req.user.id;
+
+    // 🛑 Body check
+    const { notification_id } = req.body || {};
+
+    if (!notification_id) {
+      return res.status(400).json({
+        status: false,
+        message: "notification_id is required"
+      });
+    }
+
+    // ✅ Verify notice exists
+    const check = await dbQuery(
+      `SELECT id FROM notice WHERE id = $1`,
+      [notification_id]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: "Notification not found"
+      });
+    }
+
+    // ✅ Upsert into notice_reads (insert if not exists)
+    await dbQuery(
+      `INSERT INTO notice_reads (user_id, notice_id, read_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id, notice_id) DO NOTHING`,
+      [user_id, notification_id]
+    );
+
+    return res.json({
+      status: true,
+      message: "Notification marked as read"
+    });
+
+  } catch (error) {
+    console.error("Mark Notification Read Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+/* =============================================
+   🔴 MARK ALL NOTIFICATIONS AS READ
+   POST /api/notification/mark-all-read
+   Body: {} (no body needed)
+============================================= */
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+
+    // 🔐 Auth check
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized. Invalid or missing token."
+      });
+    }
+
+    const user_id = req.user.id;
+
+    // ✅ Insert read record for all notices not yet read by this user
+    const result = await dbQuery(
+      `INSERT INTO notice_reads (user_id, notice_id, read_at)
+       SELECT $1, id, NOW()
+       FROM notice
+       WHERE id NOT IN (
+         SELECT notice_id FROM notice_reads WHERE user_id = $1
+       )`,
+      [user_id]
+    );
+
+    const updatedCount = result.rowCount || 0;
+
+    return res.json({
+      status: true,
+      message: `${updatedCount} notification(s) marked as read`,
+      updated_count: updatedCount
+    });
+
+  } catch (error) {
+    console.error("Mark All Notifications Read Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+/* =============================================
+   📋 GET UNREAD NOTIFICATION COUNT
+   GET /api/notification/list
+============================================= */
+exports.getUserNotifications = async (req, res) => {
+  try {
+
+    // 🔐 Auth check
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized. Invalid or missing token."
+      });
+    }
+
+    const user_id = req.user.id;
+
+    // ✅ Count total notices
+    const totalResult = await dbQuery(
+      `SELECT COUNT(*) AS total FROM notice`
+    );
+
+    // ✅ Count already read by this user
+    const readResult = await dbQuery(
+      `SELECT COUNT(*) AS read_count FROM notice_reads WHERE user_id = $1`,
+      [user_id]
+    );
+
+    const total = parseInt(totalResult.rows[0].total) || 0;
+    const readCount = parseInt(readResult.rows[0].read_count) || 0;
+    const unreadCount = total - readCount;
+
+    return res.json({
+      status: true,
+      message: "Unread notification count fetched successfully",
+      unread_count: unreadCount < 0 ? 0 : unreadCount
+    });
+
+  } catch (error) {
+    console.error("Get Unread Count Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error"
+    });
+  }
+};
