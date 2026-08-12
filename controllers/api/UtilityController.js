@@ -30,7 +30,7 @@ exports.getNotifications = async (req, res) => {
     let result;
 
     if (user_id) {
-      // ✅ User logged in — return is_read status via LEFT JOIN
+      // ✅ User logged in — return is_read status, exclude deleted notices
       result = await dbQuery(
         `SELECT
            n.id,
@@ -43,6 +43,9 @@ exports.getNotifications = async (req, res) => {
          FROM notice n
          LEFT JOIN notice_reads nr
            ON nr.notice_id = n.id AND nr.user_id = $1
+         WHERE n.id NOT IN (
+           SELECT notice_id FROM notice_deletes WHERE user_id = $1
+         )
          ORDER BY n.id DESC`,
         [user_id]
       );
@@ -485,6 +488,117 @@ exports.getUserNotifications = async (req, res) => {
 
   } catch (error) {
     console.error("Get Unread Count Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+/* =============================================
+   🗑️ DELETE NOTIFICATION (USER-SIDE)
+   DELETE /api/notification/delete/:id
+   Params: id (notification/notice id)
+   Header: Authorization: Bearer <token>
+============================================= */
+exports.deleteNotification = async (req, res) => {
+  try {
+
+    // 🔐 Auth check
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized. Invalid or missing token."
+      });
+    }
+
+    const user_id = req.user.id;
+    const notification_id = req.params.id;
+
+    // 🛑 Param check
+    if (!notification_id) {
+      return res.status(400).json({
+        status: false,
+        message: "notification_id is required"
+      });
+    }
+
+    // ✅ Verify notice exists
+    const check = await dbQuery(
+      `SELECT id FROM notice WHERE id = $1`,
+      [notification_id]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: "Notification not found"
+      });
+    }
+
+    // ✅ Insert into notice_deletes (idempotent — ON CONFLICT DO NOTHING)
+    await dbQuery(
+      `INSERT INTO notice_deletes (user_id, notice_id, deleted_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id, notice_id) DO NOTHING`,
+      [user_id, notification_id]
+    );
+
+    return res.json({
+      status: true,
+      message: "Notification deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Notification Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+/* =============================================
+   🗑️ DELETE ALL NOTIFICATIONS (USER-SIDE)
+   DELETE /api/notification/delete-all
+   Header: Authorization: Bearer <token>
+============================================= */
+exports.deleteAllNotifications = async (req, res) => {
+  try {
+
+    // 🔐 Auth check
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized. Invalid or missing token."
+      });
+    }
+
+    const user_id = req.user.id;
+
+    // ✅ Insert delete record for all notices not yet deleted by this user
+    const result = await dbQuery(
+      `INSERT INTO notice_deletes (user_id, notice_id, deleted_at)
+       SELECT $1, id, NOW()
+       FROM notice
+       WHERE id NOT IN (
+         SELECT notice_id FROM notice_deletes WHERE user_id = $1
+       )`,
+      [user_id]
+    );
+
+    const deletedCount = result.rowCount || 0;
+
+    return res.json({
+      status: true,
+      message: `${deletedCount} notification(s) deleted successfully`,
+      deleted_count: deletedCount
+    });
+
+  } catch (error) {
+    console.error("Delete All Notifications Error:", error);
     return res.status(500).json({
       status: false,
       message: "Internal server error"
