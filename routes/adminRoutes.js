@@ -445,6 +445,7 @@ router.post("/starline-game-rates/update", csrfProtection, authMiddleware, Starl
 ========================= */
 router.get("/starline-bid-history", csrfProtection, authMiddleware, StarlineBidHistoryController.index);
 router.post("/starline-bid-history/data", csrfProtection, authMiddleware, StarlineBidHistoryController.data);
+router.post("/starline-bid-history/games", csrfProtection, authMiddleware, StarlineBidHistoryController.games);
 
 
 

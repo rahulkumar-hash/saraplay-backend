@@ -97,6 +97,14 @@ app.use(
     )
 );
 
+// ✅ Upload folder explicitly serve karo (local + live dono pe)
+app.use(
+    "/upload",
+    express.static(
+        path.join(__dirname, "public/upload")
+    )
+);
+
 
 // ================= REDIS SESSION =================
 const store = new RedisStore({

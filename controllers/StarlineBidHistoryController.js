@@ -31,16 +31,21 @@ exports.data = async (req, res) => {
     let values = [];
     let i = 1;
 
-    if (result_date) {
-      const d = new Date(result_date);
-      const rdate = d.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      }).replace(/ /g, " ");
+    // Date filter — sirf tab lagao jab user ne date select ki ho
+    if (result_date && result_date.trim() !== "") {
+      const parts = result_date.trim().split('-');
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 
-      conditions.push(`b.game_date = $${i++}`);
-      values.push(rdate);
+      if (!isNaN(d)) {
+        const rdate = d.toLocaleDateString('en-GB', {
+          day:   '2-digit',
+          month: 'short',
+          year:  'numeric'
+        });
+        console.log(`[StarlineBidHistory] Date filter: "${rdate}"`);
+        conditions.push(`b.game_date = $${i++}`);
+        values.push(rdate);
+      }
     }
 
     if (game) {
@@ -68,7 +73,6 @@ exports.data = async (req, res) => {
       ${where}
       ORDER BY b.id DESC
     `, values);
-    
 
     res.json({
       status: true,
@@ -83,5 +87,21 @@ exports.data = async (req, res) => {
       csrfToken: req.csrfToken(),
       data: []
     });
+  }
+};
+
+
+/* =========================
+   GAMES DROPDOWN
+========================= */
+exports.games = async (req, res) => {
+  try {
+    const result = await dbQuery(
+      `SELECT id, name FROM starline_game WHERE status='true' ORDER BY name ASC`
+    );
+    res.json({ status: true, data: result.rows });
+  } catch (err) {
+    console.error("StarlineBidHistory games error:", err);
+    res.json({ status: false, data: [] });
   }
 };

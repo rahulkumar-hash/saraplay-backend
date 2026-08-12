@@ -427,19 +427,29 @@ exports.starlineBidHistory = async (req, res) => {
       bidParams,
     );
 
-    const formatted = result.rows.map((row) => ({
-      id: row.id,
-      user_id: row.user_id,
-      game_id: `${row.game_name || ""} (${row.open_time || ""})`,
-      game_date: row.game_date,
-      game_type: row.game_type,
-      pana: row.pana,
-      points: row.points,
-      win_amount: row.win_amount,
-      bid_txn_id: row.bid_txn_id,
-      date: row.date,
-      game_name: row.game_name,
-    }));
+    const formatted = result.rows.map((row) => {
+      // game_type ke basis pe number aur digit derive karo
+      // Single Digit → pana = digit (0-9)
+      // Single/Double/Tripple Pana → pana = pana number (3 digits)
+      const gameType = String(row.game_type || "").toLowerCase();
+      const isSingleDigit = gameType.includes("single digit");
+
+      return {
+        id: row.id,
+        user_id: row.user_id,
+        game_id: `${row.game_name || ""} (${row.open_time || ""})`,
+        game_date: row.game_date,
+        game_type: row.game_type,
+        pana: isSingleDigit ? "N/A" : (row.pana || "N/A"),
+        number: row.pana || "N/A",
+        digit: isSingleDigit ? (row.pana || "N/A") : "N/A",
+        points: row.points,
+        win_amount: row.win_amount,
+        bid_txn_id: row.bid_txn_id,
+        date: row.date,
+        game_name: row.game_name,
+      };
+    });
 
     return res.json({
       status: true,
