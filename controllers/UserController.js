@@ -2,6 +2,7 @@
 
 const dbQuery = require("../utils/dbQuery");
 const bcrypt = require("bcrypt");
+const { sendSingleNotification } = require("../utils/sendNotification");
 
 
 
@@ -596,6 +597,30 @@ exports.addFund = async (req, res) => {
       (user_id, txn_crdt, txn_dbdt, txn_clbal, txn_comment, txn_date)
       VALUES ($1,$2,0,$3,'Direct Credit By Admin',NOW())
     `,[user_id,amount,newBalance]);
+
+    // 🔔 Deposit notification (Firebase — only if notif_deposit = 1)
+    try {
+      const userNotif = await dbQuery(
+        `SELECT fcm_token, notif_deposit FROM users WHERE id = $1 LIMIT 1`,
+        [user_id]
+      );
+      if (
+        userNotif.rows.length &&
+        userNotif.rows[0].fcm_token &&
+        Number(userNotif.rows[0].notif_deposit) === 1
+      ) {
+        await sendSingleNotification(
+          userNotif.rows[0].fcm_token,
+          "✅ Fund Added Successfully",
+          `₹${amount} has been credited to your wallet by Admin.`
+        );
+        console.log(`📲 Deposit notification sent to User ID: ${user_id}`);
+      } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_deposit) === 0) {
+        console.log(`🔕 Deposit notification OFF for User ID: ${user_id}, skipped`);
+      }
+    } catch (notifErr) {
+      console.error("❌ Deposit Notification Error:", notifErr);
+    }
 
     res.json({
       success:true,

@@ -270,6 +270,8 @@ router.get(
 );
 
 router.post('/fund-request/data', FundRequestController.getFundData);
+router.post('/fund-request/approve', csrfProtection, authMiddleware, FundRequestController.approve);
+router.post('/fund-request/reject', csrfProtection, authMiddleware, FundRequestController.reject);
 
 
 

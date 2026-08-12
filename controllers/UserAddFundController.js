@@ -1,6 +1,7 @@
 // const pool = require("../config/db");
 
 const dbQuery = require("../utils/dbQuery");
+const { sendSingleNotification } = require("../utils/sendNotification");
 /* =========================
    PAGE LOAD
 ========================= */
@@ -56,6 +57,30 @@ exports.addFund = async (req, res) => {
       (user_id, amount, type, remark)
       VALUES ($1,$2,'credit','Admin added fund')
     `, [user_id, amount]);
+
+    // 🔔 Deposit notification (Firebase — only if notif_deposit = 1)
+    try {
+      const userNotif = await dbQuery(
+        `SELECT fcm_token, notif_deposit FROM users WHERE id = $1 LIMIT 1`,
+        [user_id]
+      );
+      if (
+        userNotif.rows.length &&
+        userNotif.rows[0].fcm_token &&
+        Number(userNotif.rows[0].notif_deposit) === 1
+      ) {
+        await sendSingleNotification(
+          userNotif.rows[0].fcm_token,
+          "✅ Fund Added Successfully",
+          `₹${amount} has been credited to your wallet by Admin.`
+        );
+        console.log(`📲 Deposit notification sent to User ID: ${user_id}`);
+      } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_deposit) === 0) {
+        console.log(`🔕 Deposit notification OFF for User ID: ${user_id}, skipped`);
+      }
+    } catch (notifErr) {
+      console.error("❌ Deposit Notification Error:", notifErr);
+    }
 
     res.json({ res: "success", msg: "Fund added successfully" });
 
