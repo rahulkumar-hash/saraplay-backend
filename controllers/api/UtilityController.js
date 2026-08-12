@@ -605,3 +605,138 @@ exports.deleteAllNotifications = async (req, res) => {
     });
   }
 };
+
+
+/* =============================================
+   🔔 GET NEW NOTIFICATION PREFERENCES
+   GET /api/notification/preferences
+   Header: Authorization: Bearer <token>
+   Response: { win, withdrawal, deposit, result } — 1=ON, 0=OFF
+============================================= */
+exports.getNotificationPreferences = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ status: false, message: "Unauthorized" });
+    }
+
+    const user_id = req.user.id;
+
+    const result = await dbQuery(
+      `SELECT notif_win, notif_withdrawal, notif_deposit, notif_result
+       FROM users WHERE id = $1 LIMIT 1`,
+      [user_id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const prefs = result.rows[0];
+
+    return res.json({
+      status: true,
+      message: "Preferences fetched successfully",
+      data: {
+        win:        Number(prefs.notif_win),
+        withdrawal: Number(prefs.notif_withdrawal),
+        deposit:    Number(prefs.notif_deposit),
+        result:     Number(prefs.notif_result)
+      }
+    });
+
+  } catch (error) {
+    console.error("getNotificationPreferences Error:", error);
+    return res.status(500).json({ status: false, message: "Internal server error" });
+  }
+};
+
+
+/* =============================================
+   🔔 UPDATE NEW NOTIFICATION PREFERENCES
+   POST /api/notification/preferences
+   Header: Authorization: Bearer <token>
+   Body: { win, withdrawal, deposit, result }  — send only the ones to update (1 or 0)
+============================================= */
+exports.updateNotificationPreferences = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ status: false, message: "Unauthorized" });
+    }
+
+    const user_id = req.user.id;
+    const body = req.body || {};
+
+    const allowed = ["win", "withdrawal", "deposit", "result"];
+
+    // Human-readable labels for alert messages
+    const labelMap = {
+      win:        "Win Notification",
+      withdrawal: "Withdrawal Notification",
+      deposit:    "Deposit Notification",
+      result:     "Result Notification"
+    };
+
+    const columnMap = {
+      win:        "notif_win",
+      withdrawal: "notif_withdrawal",
+      deposit:    "notif_deposit",
+      result:     "notif_result"
+    };
+
+    // Build dynamic SET clause — only update fields that are sent
+    const setClauses = [];
+    const values = [];
+    const alertMessages = [];
+    let idx = 1;
+
+    for (const key of allowed) {
+      if (body[key] !== undefined) {
+        const val = Number(body[key]);
+        if (val !== 0 && val !== 1) {
+          return res.status(400).json({
+            status: false,
+            message: `Invalid value for '${key}'. Must be 0 or 1.`
+          });
+        }
+        setClauses.push(`${columnMap[key]} = $${idx++}`);
+        values.push(val);
+
+        // Build alert message per toggle
+        const status = val === 1 ? "ON" : "OFF";
+        const emoji  = val === 1 ? "🔔" : "🔕";
+        alertMessages.push(`${emoji} ${labelMap[key]} turned ${status}`);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: "At least one field (win, withdrawal, deposit, result) is required"
+      });
+    }
+
+    values.push(user_id);
+
+    await dbQuery(
+      `UPDATE users SET ${setClauses.join(", ")} WHERE id = $${idx}`,
+      values
+    );
+
+    // Single toggle → direct message; multiple → joined
+    const alertMessage = alertMessages.join("\n");
+
+    return res.json({
+      status: true,
+      message: alertMessage,
+      updated: Object.fromEntries(
+        allowed
+          .filter(k => body[k] !== undefined)
+          .map(k => [k, Number(body[k])])
+      )
+    });
+
+  } catch (error) {
+    console.error("updateNotificationPreferences Error:", error);
+    return res.status(500).json({ status: false, message: "Internal server error" });
+  }
+};

@@ -178,8 +178,9 @@ async function creditWinning(client, bid, result) {
       ]);
 
 
+      // ✅ Fetch fcm_token + win notification preference
       const userRes = await client.query(`
-          SELECT fcm_token
+          SELECT fcm_token, notif_win
           FROM users
           WHERE id=$1
           LIMIT 1
@@ -187,11 +188,11 @@ async function creditWinning(client, bid, result) {
 
         if (
           userRes.rows.length &&
-          userRes.rows[0].fcm_token
+          userRes.rows[0].fcm_token &&
+          Number(userRes.rows[0].notif_win) === 1
         ) {
-
+          // notif_win = 1 (ON) → return token for bulk win notification
           return userRes.rows[0].fcm_token;
-
         }
 
         return null;

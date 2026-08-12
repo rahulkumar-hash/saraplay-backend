@@ -2,6 +2,7 @@ const pool = require("../../config/db");
 const validateWithdraw =
 require("../../utils/withdrawValidation");
 const dbQuery = require("../../utils/dbQuery");
+const { sendSingleNotification } = require("../../utils/sendNotification");
 
 
 
@@ -231,6 +232,30 @@ exports.withdrawRequest = async (req, res) => {
     );
 
     await client.query("COMMIT");
+
+    // 🔔 Withdrawal notification (if user has notif_withdrawal = 1)
+    try {
+      const userNotif = await dbQuery(
+        `SELECT fcm_token, notif_withdrawal FROM users WHERE id = $1 LIMIT 1`,
+        [user_id]
+      );
+      if (
+        userNotif.rows.length &&
+        userNotif.rows[0].fcm_token &&
+        Number(userNotif.rows[0].notif_withdrawal) === 1
+      ) {
+        await sendSingleNotification(
+          userNotif.rows[0].fcm_token,
+          "💸 Withdrawal Request Submitted",
+          `Your withdrawal request of ₹${amount} has been submitted successfully.`
+        );
+        console.log(`📲 Withdrawal notification sent to User ID: ${user_id}`);
+      } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_withdrawal) === 0) {
+        console.log(`🔕 Withdrawal notification OFF for User ID: ${user_id}, skipped`);
+      }
+    } catch (notifErr) {
+      console.error("❌ Withdrawal Notification Error:", notifErr);
+    }
 
     return res.json({
       status: true,

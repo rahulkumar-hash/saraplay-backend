@@ -442,18 +442,23 @@ async function creditJackpotWallet(bid, game_id, date, digit) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `, [user_id, game_id, date, txn_id, digit, bid.bid_amount, amount, moment().format("DD MMM YYYY")]);
 
-    // Send FCM to winner
+    // Send FCM to winner only if notif_win = 1
     try {
       const userRes = await dbQuery(
-        `SELECT fcm_token FROM "users" WHERE id = $1 LIMIT 1`,
+        `SELECT fcm_token, notif_win FROM "users" WHERE id = $1 LIMIT 1`,
         [user_id]
       );
-      if (userRes.rows[0]?.fcm_token) {
+      if (
+        userRes.rows[0]?.fcm_token &&
+        Number(userRes.rows[0].notif_win) === 1
+      ) {
         await sendSingleNotification(
           userRes.rows[0].fcm_token,
           "🎉 Jackpot Jeet Gaye!",
           `Aapko ₹${amount} mila! Jackpot Result: ${digit}`
         );
+      } else if (userRes.rows.length && Number(userRes.rows[0].notif_win) === 0) {
+        console.log(`🔕 Win notification OFF for User ID: ${user_id}, skipped`);
       }
     } catch (fcmErr) {
       console.error("FCM to winner error:", fcmErr);

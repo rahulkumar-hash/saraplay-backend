@@ -1,6 +1,6 @@
 const pool = require("../../config/db");
-
 const dbQuery = require("../../utils/dbQuery");
+const { sendSingleNotification } = require("../../utils/sendNotification");
 
 
 exports.walletRecharge = async (req, res) => {
@@ -73,6 +73,30 @@ exports.walletRecharge = async (req, res) => {
     );
 
     await client.query("COMMIT");
+
+    // 🔔 Deposit notification (if user has notif_deposit = 1)
+    try {
+      const userNotif = await dbQuery(
+        `SELECT fcm_token, notif_deposit FROM users WHERE id = $1 LIMIT 1`,
+        [user_id]
+      );
+      if (
+        userNotif.rows.length &&
+        userNotif.rows[0].fcm_token &&
+        Number(userNotif.rows[0].notif_deposit) === 1
+      ) {
+        await sendSingleNotification(
+          userNotif.rows[0].fcm_token,
+          "✅ Deposit Successful",
+          `₹${amount} has been added to your wallet. New balance: ₹${closingBalance}`
+        );
+        console.log(`📲 Deposit notification sent to User ID: ${user_id}`);
+      } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_deposit) === 0) {
+        console.log(`🔕 Deposit notification OFF for User ID: ${user_id}, skipped`);
+      }
+    } catch (notifErr) {
+      console.error("❌ Deposit Notification Error:", notifErr);
+    }
 
     return res.json({
       status: true,

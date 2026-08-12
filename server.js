@@ -259,6 +259,17 @@ app.use(
         `);
         console.log("✅ notice_deletes table ready");
 
+        // ================= NEW NOTIFICATION PREFERENCES =================
+        // 4 new types: win, withdrawal, deposit, result
+        await pool.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS notif_win       SMALLINT NOT NULL DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS notif_withdrawal SMALLINT NOT NULL DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS notif_deposit    SMALLINT NOT NULL DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS notif_result     SMALLINT NOT NULL DEFAULT 1
+        `);
+        console.log("✅ notif_win / notif_withdrawal / notif_deposit / notif_result columns ready");
+
     } catch (err) {
         console.error("❌ notice_reads migration error:", err.message);
     }

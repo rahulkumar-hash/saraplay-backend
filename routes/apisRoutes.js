@@ -186,6 +186,8 @@ router.post("/notification/mark-read", jwtAuth, UtilityController.markNotificati
 router.post("/notification/mark-all-read", jwtAuth, UtilityController.markAllNotificationsRead);
 router.delete("/notification/delete/:id", jwtAuth, UtilityController.deleteNotification);
 router.delete("/notification/delete-all", jwtAuth, UtilityController.deleteAllNotifications);
+router.get("/notification/preferences", jwtAuth, UtilityController.getNotificationPreferences);
+router.post("/notification/preferences", jwtAuth, UtilityController.updateNotificationPreferences);
 router.post("/fcm/update", jwtAuth,UtilityController.updateFcm);
 router.get("/user/verify",jwtAuth,UtilityController.verifyUser);
 

@@ -871,14 +871,20 @@ async function creditWallet(bid, result) {
     console.log(`✅ Win History Recorded for User ID: ${user_id}`);
 
     try {
-      const userRes = await dbQuery(`SELECT fcm_token FROM "users" WHERE id = $1 LIMIT 1`, [user_id]);
-      if (userRes.rows.length > 0 && userRes.rows[0].fcm_token) {
+      const userRes = await dbQuery(`SELECT fcm_token, notif_win FROM "users" WHERE id = $1 LIMIT 1`, [user_id]);
+      if (
+        userRes.rows.length > 0 &&
+        userRes.rows[0].fcm_token &&
+        Number(userRes.rows[0].notif_win) === 1
+      ) {
         await sendSingleNotification(
           userRes.rows[0].fcm_token,
           "Congratulations! 🥳 You Won!",
           `You won ₹${amount} in ${bid.game_type} (${bid.session})!`
         );
         console.log(`📲 Winner FCM Notification Sent to User ID: ${user_id}`);
+      } else if (userRes.rows.length > 0 && Number(userRes.rows[0].notif_win) === 0) {
+        console.log(`🔕 Win notification OFF for User ID: ${user_id}, skipped`);
       } else {
         console.log(`ℹ️ FCM Token missing for User ID: ${user_id}, skipped FCM notification`);
       }
