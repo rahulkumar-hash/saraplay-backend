@@ -406,15 +406,24 @@ exports.placedBid = async (req, res) => {
                session = expectedSession;
                val._session_adjusted = false;
 
+            } else if (
+               active_session === "open" &&
+               userSentSession.toLowerCase() === "close"
+            ) {
+               // Case 3: active_session = "open" (open time nahi aayi)
+               // → Close bhi allow karo kyunki open time se pehle dono valid hain
+               session = "Close";
+               val._session_adjusted = false;
+
             } else {
-               // Case 3: User session mismatches active session → reject with alert
+               // Case 4: active_session = "close" but user ne "Open" bheja → reject
                await client.query("ROLLBACK");
                return res.json({
                   status: false,
                   session_mismatch: true,
                   active_session: expectedSession,
                   sent_session:   userSentSession,
-                  message: `Only ${expectedSession} session is active right now. You sent "${userSentSession}" session which is not allowed.`
+                  message: `Only ${expectedSession} session is available now.`
                });
             }
          }

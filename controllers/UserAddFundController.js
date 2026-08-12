@@ -60,10 +60,12 @@ exports.addFund = async (req, res) => {
 
     // 🔔 Deposit notification (Firebase — only if notif_deposit = 1)
     try {
+      console.log(`🔍 [UserAddFundController.addFund] Checking deposit notif for User ID: ${user_id}`);
       const userNotif = await dbQuery(
         `SELECT fcm_token, notif_deposit FROM users WHERE id = $1 LIMIT 1`,
         [user_id]
       );
+      console.log(`🔍 [UserAddFundController.addFund] DB Result:`, JSON.stringify(userNotif.rows[0] || null));
       if (
         userNotif.rows.length &&
         userNotif.rows[0].fcm_token &&
@@ -77,6 +79,10 @@ exports.addFund = async (req, res) => {
         console.log(`📲 Deposit notification sent to User ID: ${user_id}`);
       } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_deposit) === 0) {
         console.log(`🔕 Deposit notification OFF for User ID: ${user_id}, skipped`);
+      } else if (!userNotif.rows.length) {
+        console.log(`❌ User ID ${user_id} not found in users table`);
+      } else if (!userNotif.rows[0].fcm_token) {
+        console.log(`❌ FCM token missing for User ID: ${user_id}`);
       }
     } catch (notifErr) {
       console.error("❌ Deposit Notification Error:", notifErr);
