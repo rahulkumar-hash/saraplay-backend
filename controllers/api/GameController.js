@@ -274,16 +274,14 @@ exports.getGames = async (req, res) => {
     const games = gamesResult.rows;
 
     for (let game of games) {
-      // ✅ Same as PHP default
       game.open_market_status = true;
-      // game.market_status = Boolean(game.market_status);
-
+      game.close_market_status = true;
       game.open_pana = "";
       game.open_digit = "";
       game.close_pana = "";
       game.close_digit = "";
 
-      // ✅ SAME as PHP: open_declare_date != ''
+      // 1. Fetch today's result if declared
       const resultRes = await dbQuery(
         `SELECT * FROM declear_result
          WHERE result_date = $1
@@ -295,51 +293,65 @@ exports.getGames = async (req, res) => {
       const result = resultRes.rows[0];
 
       if (result) {
-        game.open_market_status = false;
-        game.open_pana = result.open_pana;
-        game.open_digit = result.open_digit;
+        game.open_pana = result.open_pana || "";
+        game.open_digit = result.open_digit || "";
 
         if (result.close_declare_date && result.close_declare_date !== "") {
-          // game.market_status = false;
-          game.close_pana = result.close_pana;
-          game.close_digit = result.close_digit;
+          game.close_pana = result.close_pana || "";
+          game.close_digit = result.close_digit || "";
         }
       }
 
-      // ✅ Closing day logic (exact PHP match)
+      // 2. Check Closing Days (e.g. "Sunday, Monday")
+      let is_today_closed = false;
       if (game.closing_day) {
         const closingDays = game.closing_day
           .split(",")
           .map((d) => d.trim().toLowerCase());
-
-        if (closingDays.includes(currentDay)) {
-          game.open_market_status = false;
-          // game.market_status = false;
-        }
+        is_today_closed = closingDays.includes(currentDay);
       }
 
-      // ─────────────────────────────────────────────────────────────────────
-      // Dynamic session & market status (Document Section 1 + 3)
-      //   open_declared is already derived above (result != null)
-      // ─────────────────────────────────────────────────────────────────────
-      const openDeclaredForSession = !game.open_market_status && !!result;
+      game.is_today_closed = is_today_closed;
+      game.is_open_today = !is_today_closed;
 
-      // Resolve live active session
-      const active_session = resolveSessionFromTimes(
-        game.open_time,
-        game.close_time,
-        openDeclaredForSession
-      );
+      // 3. Time comparison (AM/PM safe IST time)
+      const { timeMs: nowMins } = getISTTimeMs();
+      const openMins  = timeStrToMinutes(game.open_time);
+      const closeMins = timeStrToMinutes(game.close_time);
 
-      game.active_session = active_session;
+      const openTimePassed = nowMins >= openMins;
+      const closeTimePassed = nowMins >= closeMins;
 
-      // close_market_status: true  → close bids accepted
-      //                      false → close session also closed
-      if (active_session === "closed") {
+      const is_admin_disabled = (game.market_status === false || game.market_status === "false" || game.status !== "true");
+
+      // 4. Determine market_status, open_market_status, close_market_status, active_session & msg
+      if (is_today_closed) {
+        game.open_market_status = false;
         game.close_market_status = false;
-      } else {
-        // If close result already declared → close market off
+        game.market_status = false;
+        game.active_session = "closed";
+        game.msg = "Market Closed For Today (Holiday)";
+      } else if (is_admin_disabled || closeTimePassed) {
+        // Auto-close when close_time has passed OR admin disabled it
+        game.open_market_status = false;
+        game.close_market_status = false;
+        game.market_status = false;
+        game.active_session = "closed";
+        game.msg = "Market Closed";
+      } else if (openTimePassed) {
+        // Open time passed -> Open session closed, Close session active
+        game.open_market_status = false;
         game.close_market_status = !(result && result.close_declare_date && result.close_declare_date !== "");
+        game.market_status = game.close_market_status;
+        game.active_session = game.close_market_status ? "close" : "closed";
+        game.msg = game.close_market_status ? "Market Open (Close Session)" : "Market Closed";
+      } else {
+        // Before Open Time -> Both sessions open
+        game.open_market_status = !(result && result.open_declare_date && result.open_declare_date !== "");
+        game.close_market_status = true;
+        game.market_status = true;
+        game.active_session = "open";
+        game.msg = "Market Open";
       }
     }
 

@@ -32,12 +32,25 @@ function timeStrToMinutes(timeStr) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function resolveActiveSession(game_id) {
   const gameRes = await dbQuery(
-    "SELECT open_time, close_time FROM game WHERE id = $1",
+    "SELECT open_time, close_time, market_status, closing_day FROM game WHERE id = $1",
     [game_id]
   );
-  if (!gameRes.rows.length) return { active_session: "closed", session_adjusted: false };
+  if (!gameRes.rows.length) return { active_session: "closed", session_adjusted: false, is_closing_day: false };
 
-  const { open_time, close_time } = gameRes.rows[0];
+  const { open_time, close_time, market_status, closing_day } = gameRes.rows[0];
+
+  // Check closing day
+  const todayObj = new Date();
+  const currentDay = todayObj.toLocaleString("en-US", { weekday: "long" }).toLowerCase();
+  let is_closing_day = false;
+  if (closing_day) {
+    const closingDays = closing_day.split(",").map((d) => d.trim().toLowerCase());
+    is_closing_day = closingDays.includes(currentDay);
+  }
+
+  if (is_closing_day) {
+    return { active_session: "closed", session_adjusted: false, is_closing_day: true };
+  }
 
   // IST current time → minutes since midnight (correct AM/PM parsing)
   const nowIST  = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
@@ -48,8 +61,6 @@ async function resolveActiveSession(game_id) {
   const openMins  = timeStrToMinutes(open_time);
   const closeMins = timeStrToMinutes(close_time);
 
-  // Check if open result already declared today
-  const todayObj = new Date();
   const todayFmt = `${String(todayObj.getDate()).padStart(2, "0")} ${todayObj.toLocaleString("en-US", { month: "short" })} ${todayObj.getFullYear()}`;
 
   const declareRes = await dbQuery(
@@ -62,33 +73,19 @@ async function resolveActiveSession(game_id) {
 
   const declareRow    = declareRes.rows[0] || {};
   const open_declared = !!(declareRow.open_declare_date && declareRow.open_declare_date !== "");
-  const close_declared = !!(declareRow.close_declare_date && declareRow.close_declare_date !== "");
 
-  // ── Resolution logic (minutes comparison — AM/PM safe) ──────────────────
-  //
-  //  Before open_time  + open NOT declared   → "open"   (Open session active)
-  //  After  open_time  + before close_time   → "close"  (Close session active)
-  //  After  close_time + close NOT declared  → "close"  (still accept Close bids)
-  //  After  close_time + close declared      → "closed" (fully done for today)
-  //  Admin market_status = false             → "closed" (checked by caller)
-  //
+  // 1. Before open_time + open NOT declared -> "open" session (both Open & Close bets allowed)
   if (nowMins < openMins && !open_declared) {
-    return { active_session: "open", session_adjusted: false };
+    return { active_session: "open", session_adjusted: false, is_closing_day: false };
   }
 
+  // 2. After open_time & before close_time -> "close" session (ONLY Close bets allowed)
   if (nowMins < closeMins) {
-    // open_time passed, close_time not yet → Close session
-    return { active_session: "close", session_adjusted: nowMins >= openMins };
+    return { active_session: "close", session_adjusted: true, is_closing_day: false };
   }
 
-  // Past close_time — check if close result declared
-  if (!close_declared) {
-    // Close result not yet declared → still accept Close session bids
-    return { active_session: "close", session_adjusted: false };
-  }
-
-  // Close result declared → market fully done
-  return { active_session: "closed", session_adjusted: false };
+  // 3. Past close_time -> Market closed for today (neither Open nor Close bets allowed)
+  return { active_session: "closed", session_adjusted: false, is_closing_day: false };
 }
 
 
