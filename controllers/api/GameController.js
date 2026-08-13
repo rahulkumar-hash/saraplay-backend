@@ -322,7 +322,7 @@ exports.getGames = async (req, res) => {
       const openTimePassed = nowMins >= openMins;
       const closeTimePassed = nowMins >= closeMins;
 
-      const is_admin_disabled = (game.market_status === false || game.market_status === "false" || game.status !== "true");
+      const is_admin_disabled = (game.market_status === false || game.market_status === "false");
 
       // 4. Determine market_status, open_market_status, close_market_status, active_session & msg
       if (is_today_closed) {
