@@ -8,35 +8,49 @@ exports.getJackpotGames = async (req, res) => {
     const result = await dbQuery("SELECT * FROM jackpot");
     const games = result.rows;
 
-    const currentTime = new Date().toTimeString().slice(0, 5);
-    const today = new Date().toISOString().slice(0, 10);
+    // ── IST current time in HH:MM (24-hour) ──────────────────────────────
+    const istNow     = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate    = new Date(istNow);
+    const hh         = String(istDate.getHours()).padStart(2, "0");
+    const mm         = String(istDate.getMinutes()).padStart(2, "0");
+    const currentTime = `${hh}:${mm}`;   // e.g. "18:40"  always HH:MM
+
+    // ── Today's date in IST (YYYY-MM-DD) ─────────────────────────────────
+    const todayISO = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
     for (let game of games) {
+      // Check if result DECLARED (not just saved) today
+      // declare_date must be non-null and non-empty to count as declared
       const resultData = await dbQuery(
-        `SELECT * FROM jackpot_declear_result 
-         WHERE result_date=$1 AND game_id=$2 AND declare_date!='' LIMIT 1`,
-        [today, game.id],
+        `SELECT result FROM jackpot_declear_result 
+         WHERE game_id = $1
+           AND result_date::date = $2::date
+           AND declare_date IS NOT NULL 
+           AND declare_date != ''
+         LIMIT 1`,
+        [game.id, todayISO],
       );
 
-      const resultRow = resultData.rows;
-
-      if (resultRow.length > 0) {
+      if (resultData.rows.length > 0) {
+        // Result declared → always closed
         game.market_status = false;
-        game.result = resultRow[0].result;
+        game.result        = resultData.rows[0].result || "";
       } else {
+        // Not declared yet → check current time vs close_time
         game.market_status = currentTime < game.close_time;
-        game.result = "";
+        game.result        = "";
       }
     }
 
     res.json({
-      status: true,
-      message: "Jackpot Games Loaded Successfully",
-      result: games,
+      status:       true,
+      message:      "Jackpot Games Loaded Successfully",
+      current_time: currentTime,   // e.g. "18:40" — confirm this matches IST
+      result:       games,
     });
   } catch (error) {
     res.json({
-      status: false,
+      status:  false,
       message: error.message,
     });
   }

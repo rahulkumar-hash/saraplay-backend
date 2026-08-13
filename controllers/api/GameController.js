@@ -504,54 +504,54 @@ exports.getHowToPlay = async (req, res) => {
 exports.winHistory = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { from_date, page = 1, limit = 10 } = req.body || {};
 
     if (!userId) {
-      return res.json({
-        status: false,
-        message: "Missing Parameters",
-      });
+      return res.json({ status: false, message: "Missing Parameters" });
     }
 
-    const currentPage = parseInt(page);
-    const perPage = parseInt(limit);
-    const offset = (currentPage - 1) * perPage;
+    // ✅ Safe destructure — works even if body is empty/undefined/null
+    const body  = req.body && typeof req.body === "object" ? req.body : {};
+    const from  = body.from  || null;
+    const to    = body.to    || null;
+    const page  = parseInt(body.page)  || 1;
+    const limit = parseInt(body.limit) || 10;
 
-    const formatDate = (inputDate) => {
-      const d = new Date(inputDate);
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = d.toLocaleString("en-US", { month: "short" });
-      const year = d.getFullYear();
-      return `${day} ${month} ${year}`;
-    };
+    const offset = (page - 1) * limit;
 
-    // ✅ Date filter is optional now — only applied when from_date is passed
-    const hasDateFilter = !!from_date;
-    const formattedDate = hasDateFilter ? formatDate(from_date) : null;
-
-    // ✅ Check user exists
-    const userCheck = await dbQuery(`SELECT id FROM users WHERE id = $1`, [
-      userId,
-    ]);
-
+    // ── User check ────────────────────────────────────────────────────────────
+    const userCheck = await dbQuery(`SELECT id FROM users WHERE id = $1`, [userId]);
     if (userCheck.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Invalid User",
-      });
+      return res.json({ status: false, message: "Invalid User" });
     }
 
-    const dateFilterClause = hasDateFilter ? `AND date = $2` : "";
-    const dateFilterClauseJoin = hasDateFilter ? `AND w.date = $2` : "";
+    // ── Date clause builder ───────────────────────────────────────────────────
+    // win_history.date stored as "DD Mon YYYY" → TO_DATE for comparison
+    let dateClause  = "";
+    let countParams = [userId];
+    let dataParams  = [userId];
+    let pIdx        = 2;
 
-    // ✅ Total count
-    const countParams = hasDateFilter ? [userId, formattedDate] : [userId];
+    if (from && to) {
+      // Range filter
+      dateClause = `AND TO_DATE(w.date, 'DD Mon YYYY') BETWEEN $${pIdx} AND $${pIdx + 1}`;
+      countParams.push(from, to);
+      dataParams.push(from, to);
+      pIdx += 2;
+    } else if (from) {
+      // Single date
+      dateClause = `AND TO_DATE(w.date, 'DD Mon YYYY') = $${pIdx}::date`;
+      countParams.push(from);
+      dataParams.push(from);
+      pIdx += 1;
+    }
+    // No dates → fetch ALL records for this user
 
+    // ── Total count ───────────────────────────────────────────────────────────
     const countQuery = await dbQuery(
       `SELECT COUNT(*)
-       FROM win_history
-       WHERE user_id = $1
-       ${dateFilterClause}`,
+       FROM win_history w
+       WHERE w.user_id = $1
+       ${dateClause}`,
       countParams,
     );
 
@@ -559,48 +559,54 @@ exports.winHistory = async (req, res) => {
 
     if (total === 0) {
       return res.json({
-        status: false,
+        status:  false,
         message: "History Not Found",
+        result:  [],
       });
     }
 
-    // ✅ Paginated data with JOIN
-    const historyParams = hasDateFilter
-      ? [userId, formattedDate, perPage, offset]
-      : [userId, perPage, offset];
-
-    const limitOffsetPlaceholders = hasDateFilter ? `$3 OFFSET $4` : `$2 OFFSET $3`;
+    // ── Paginated data with game name JOIN ────────────────────────────────────
+    dataParams.push(limit, offset);
 
     const historyQuery = await dbQuery(
-      `SELECT w.*, g.name AS game_name
+      `SELECT
+          w.id,
+          w.user_id,
+          w.game_id,
+          COALESCE(g.name, 'Unknown') AS game_name,
+          w.session,
+          w.game_type,
+          w.game_date,
+          w.pana,
+          w.points,
+          w.txn_id,
+          w.amount        AS win_amount,
+          w.date
        FROM win_history w
        LEFT JOIN game g ON g.id = w.game_id
        WHERE w.user_id = $1
-       ${dateFilterClauseJoin}
+       ${dateClause}
        ORDER BY w.id DESC
-       LIMIT ${limitOffsetPlaceholders}`,
-      historyParams,
+       LIMIT $${pIdx} OFFSET $${pIdx + 1}`,
+      dataParams,
     );
 
-    const result = historyQuery.rows.map((row) => ({
-      ...row,
-      game_id: row.game_name,
-    }));
-
     return res.json({
-      status: true,
-      message: "Data Found",
-      page: currentPage,
-      limit: perPage,
+      status:     true,
+      message:    "Data Found",
+      page,
+      limit,
       total,
-      totalPages: Math.ceil(total / perPage),
-      result,
+      totalPages: Math.ceil(total / limit),
+      result:     historyQuery.rows,
     });
+
   } catch (error) {
-    console.error(error);
-    return res.status(202).json({
-      status: false,
+    console.error("Win History Error:", error);
+    return res.status(500).json({
+      status:  false,
       message: "Server Error",
+      error:   error.message,
     });
   }
 };

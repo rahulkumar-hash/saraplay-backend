@@ -1103,53 +1103,44 @@ exports.jackpotBidHistory = async (req, res) => {
       });
     }
 
-    // const user_id = 1;
     const user_id = req.user.id;
 
     const { from, to, page = 1, limit = 10 } = req.body;
 
     const offset = (page - 1) * limit;
 
-    let whereClause = "WHERE user_id = $1";
+    let whereClause = "WHERE jb.user_id = $1";
     let values = [user_id];
     let paramIndex = 2;
 
     // 📅 Optional date filter
     if (from && to) {
-      whereClause += ` AND game_date >= $${paramIndex} AND game_date <= $${paramIndex + 1}`;
+      whereClause += ` AND jb.game_date >= $${paramIndex} AND jb.game_date <= $${paramIndex + 1}`;
       values.push(from, to);
       paramIndex += 2;
     }
 
     // 🔢 Total count for pagination
     const countQuery = await dbQuery(
-      `SELECT COUNT(*) FROM jackpot_bid ${whereClause}`,
+      `SELECT COUNT(*) FROM jackpot_bid jb ${whereClause}`,
       values
     );
 
     const totalRecords = parseInt(countQuery.rows[0].count);
     const totalPages = Math.ceil(totalRecords / limit);
 
-    // 📄 Main data query
+    // 📄 Main data query — JOIN jackpot table to get game name
     const dataQuery = await dbQuery(
-      `SELECT * FROM jackpot_bid 
+      `SELECT 
+          jb.*,
+          COALESCE(j.name, 'Unknown') AS game_name
+       FROM jackpot_bid jb
+       LEFT JOIN jackpot j ON j.id = jb.game_id
        ${whereClause}
-       ORDER BY id DESC
+       ORDER BY jb.id DESC
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...values, limit, offset]
     );
-
-
-
-    console.log("USER:", req.user);
-    console.log("BODY:", req.body);
-
-
-    console.log("WHERE:", whereClause);
-console.log("VALUES:", values);
-console.log("LIMIT:", limit, "OFFSET:", offset);
-
-
 
     if (dataQuery.rows.length === 0) {
       return res.status(404).json({
