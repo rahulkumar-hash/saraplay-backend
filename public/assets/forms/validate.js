@@ -979,6 +979,7 @@ Starline Declare Result
 ======================================================================================================*/
 
 let starlineDeclareTable = $('#starlineDeclareTable').DataTable({
+  destroy: true,
   processing: true,
   serverSide: false,
   pageLength: 10,
@@ -996,8 +997,10 @@ let starlineDeclareTable = $('#starlineDeclareTable').DataTable({
       d.game_id = $('#game_id').val();
     },
     dataSrc: function (res) {
-      if (res.status !== true) return [];
-      return res.data;
+      if (res && res.data && Array.isArray(res.data)) {
+        return res.data;
+      }
+      return [];
     }
   },
 
@@ -1050,17 +1053,137 @@ $('#starlineDeclareFilterForm').on('submit', function (e) {
 
 
 /* =========================
-   LOAD GAMES
+   LOAD GAMES (Starline Only)
 ========================= */
 const todayStr = new Date().toISOString().slice(0, 10);
 $('#SubmitDate').attr("max", todayStr);
 
-$.get('/admin/manage-starline-games/data', res => {
-  let html = '<option value="">Select Game (All)</option>';
-  res.data.forEach(g => {
-      html += `<option value="${g.id}">${g.name}</option>`;
+if ($('#starlineDeclareFilterForm').length) {
+  $.get('/admin/manage-starline-games/data', res => {
+    let html = '<option value="">Select Game (All)</option>';
+    res.data.forEach(g => {
+        html += `<option value="${g.id}">${g.name}</option>`;
+    });
+    $('#game_id').html(html);
   });
-  $('#game_id').html(html);
+}
+
+
+/* ===================================================================================================
+
+Jackpot Declare Result
+
+======================================================================================================*/
+
+let jackpotDataTable;
+if ($('#jackpotDataTable').length) {
+  jackpotDataTable = $('#jackpotDataTable').DataTable({
+    destroy: true,
+    processing: true,
+    serverSide: false,
+    pageLength: 10,
+    order: [],
+    responsive: true,
+
+    ajax: {
+      url: '/admin/get-jackpot-declare-results',
+      type: 'POST',
+      headers: {
+        "CSRF-Token": csrfToken
+      },
+      data: function (d) {
+        d.date = $('#SubmitDate').val();
+        d.game_id = $('#game_id').val();
+      },
+      dataSrc: function (res) {
+        if (res && res.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+        return [];
+      }
+    },
+
+    columns: [
+      {
+        data: null,
+        render: (d, t, r, m) => m.row + 1
+      },
+      { data: 'game_name' },
+      { data: 'result_date' },
+      {
+        data: 'declare_date',
+        render: d => d ? d : '<span class="badge bg-warning text-dark">Pending</span>'
+      },
+      {
+        data: 'result',
+        render: d => d ? `<b>${d}</b>` : '-'
+      },
+      {
+        data: null,
+        render: r => `
+          <button class="btn btn-danger btn-sm"
+            onclick="JackpotResultStatusDelete(${r.id})">
+            <i class="fa fa-trash"></i> Delete
+          </button>
+        `
+      }
+    ]
+  });
+}
+
+
+/* =========================
+   JACKPOT FILTER SUBMIT
+========================= */
+$('#jackpotDeclareFilterForm').on('submit', function (e) {
+  e.preventDefault();
+
+  if (typeof jackpotDataTable !== 'undefined' && jackpotDataTable.ajax) {
+    jackpotDataTable.ajax.reload();
+  } else if ($.fn.DataTable.isDataTable('#jackpotDataTable')) {
+    $('#jackpotDataTable').DataTable().ajax.reload();
+  }
+
+  if ($('#SubmitDate').val() && $('#game_id').val()) {
+    loadJackpotDeclareForm();
+  } else {
+    $('#jackpotFormContainer').html('<div class="alert alert-info">Please select Date and Game Name above to declare a result.</div>');
+  }
+});
+
+function loadJackpotDeclareForm() {
+  const date = $('#SubmitDate').val();
+  const game_id = $('#game_id').val();
+
+  if (!date || !game_id) {
+    $('#jackpotFormContainer').html('<div class="alert alert-info">Please select Date and Game Name above to declare a result.</div>');
+    return;
+  }
+
+  $.ajax({
+    url: '/admin/get-jackpot-declare-game',
+    type: 'POST',
+    headers: { 'CSRF-Token': csrfToken },
+    data: { date, game_id },
+    success: function(res) {
+      if (res && res.status && res.html) {
+        $('#jackpotFormContainer').html(res.html);
+      } else {
+        $('#jackpotFormContainer').html('<div class="alert alert-warning">' + ((res && res.msg) ? res.msg : 'Form load error') + '</div>');
+      }
+    },
+    error: function() {
+      $('#jackpotFormContainer').html('<div class="alert alert-danger">Server Error loading form</div>');
+    }
+  });
+}
+
+$(document).on('click', '#jackpotSaveBtn', function() {
+  saveJackpotResult();
+});
+
+$(document).on('click', '#jackpotDeclareBtn', function() {
+  declareJackpotResult();
 });
 
 

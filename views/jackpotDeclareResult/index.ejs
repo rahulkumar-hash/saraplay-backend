@@ -15,42 +15,37 @@
 
   <!-- FILTER -->
   <div class="col-md-12">
-    <div class="card">
-      <div class="card-header">
-         <h4 class="card-title">Filter Data</h4>
-      </div>
+    <div class="card mb-3">
       <div class="card-body">
+        <h4>Select Game</h4>
 
         <form id="jackpotDeclareFilterForm">
           <div class="row">
 
-            <div class="form-group col-md-4">
+            <div class="col-md-4">
               <label>Result Date</label>
               <input type="date" name="result_date" id="SubmitDate" class="form-control">
             </div>
 
-            <div class="form-group col-md-4">
+            <div class="col-md-4">
               <label>Game Name</label>
               <select name="game_id" id="game_id" class="form-control">
-                <option value="">Select Game Name</option>
+                <option value="">Select Game (All)</option>
                 <% games.forEach(g => { %>
                   <option value="<%= g.id %>"><%= g.name %></option>
                 <% }) %>
               </select>
             </div>
 
-            <div class="form-group col-md-2">
-              <label>&nbsp;</label>
-              <button class="btn btn-primary btn-block mt-4">
-                Go
-              </button>
+            <div class="col-md-2 mt-4">
+              <button type="submit" class="btn btn-primary w-100">Go</button>
             </div>
 
           </div>
         </form>
 
-        <div id="error" style="display:none" class="alert alert-danger mt-2">
-          Please Select Date & Game
+        <div id="error" class="alert alert-danger mt-2 d-none">
+          Please select date & game
         </div>
 
       </div>
@@ -65,7 +60,7 @@
     <div class="card">
       <div class="card-body">
 
-        <table id="jackpotDataTable" class="display table table-striped table-bordered w-100">
+        <table id="jackpotDataTable" class="table table-bordered w-100">
           <thead>
             <tr>
               <th>#</th>
@@ -97,96 +92,3 @@
     </div>
   </div>
 </div>
-
-<script>
-let jackpotDataTable;
-
-$(document).ready(function() {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  $('#SubmitDate').attr("max", todayStr);
-
-  const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-  jackpotDataTable = $('#jackpotDataTable').DataTable({
-    processing: true,
-    serverSide: false,
-    pageLength: 10,
-    order: [],
-    responsive: true,
-    ajax: {
-      url: '/admin/get-jackpot-declare-results',
-      type: 'POST',
-      headers: { 'CSRF-Token': getCsrfToken() },
-      data: function (d) {
-        d.date = $('#SubmitDate').val();
-        d.game_id = $('#game_id').val();
-      },
-      dataSrc: function (res) {
-        if (res.status !== true) return [];
-        return res.data;
-      }
-    },
-    columns: [
-      { data: null, render: (d, t, r, m) => m.row + 1 },
-      { data: 'game_name' },
-      { data: 'result_date' },
-      { data: 'declare_date', render: d => d ? d : '<span class="badge bg-warning text-dark">Pending</span>' },
-      { data: 'result', render: d => d ? `<b>${d}</b>` : '-' },
-      {
-        data: null,
-        render: r => `
-          <button class="btn btn-danger btn-sm" onclick="JackpotResultStatusDelete(${r.id})">
-            <i class="fa fa-trash"></i> Delete
-          </button>
-        `
-      }
-    ]
-  });
-
-  $('#jackpotDeclareFilterForm').on('submit', function (e) {
-    e.preventDefault();
-    const date = $('#SubmitDate').val();
-    const game_id = $('#game_id').val();
-
-    jackpotDataTable.ajax.reload();
-
-    if (date && game_id) {
-      $('#error').hide();
-      loadJackpotDeclareForm();
-    } else {
-      $('#jackpotFormContainer').html('<div class="alert alert-info">Please select Date and Game Name above to declare a result.</div>');
-    }
-  });
-
-  $(document).on('click', '#jackpotSaveBtn', function() {
-    saveJackpotResult();
-  });
-
-  $(document).on('click', '#jackpotDeclareBtn', function() {
-    declareJackpotResult();
-  });
-});
-
-function loadJackpotDeclareForm() {
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  $.ajax({
-    url: '/admin/get-jackpot-declare-game',
-    type: 'POST',
-    headers: { 'CSRF-Token': csrfToken },
-    data: {
-      date: $('#SubmitDate').val(),
-      game_id: $('#game_id').val()
-    },
-    success: function(res) {
-      if (res.status && res.html) {
-        $('#jackpotFormContainer').html(res.html);
-      } else {
-        $('#jackpotFormContainer').html('<div class="alert alert-warning">' + (res.msg || 'Form load error') + '</div>');
-      }
-    },
-    error: function() {
-      $('#jackpotFormContainer').html('<div class="alert alert-danger">Server Error loading form</div>');
-    }
-  });
-}
-</script>

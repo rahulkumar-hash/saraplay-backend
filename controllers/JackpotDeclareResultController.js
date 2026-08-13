@@ -77,8 +77,8 @@ exports.getDeclareGame = async (req, res) => {
     let declareBtn = '';
 
     if (!isDeclared) {
-      saveBtn    = `<button type="button" class="btn btn-primary me-2" id="jackpotSaveBtn">Save</button>`;
-      declareBtn = `<button type="button" class="btn btn-success" id="jackpotDeclareBtn">Declare Result</button>`;
+      saveBtn    = `<button type="button" class="btn btn-primary me-2" id="jackpotSaveBtn" onclick="saveJackpotResult()"><i class="fa fa-save"></i> Save</button>`;
+      declareBtn = `<button type="button" class="btn btn-success" id="jackpotDeclareBtn" onclick="declareJackpotResult()"><i class="fa fa-check"></i> Declare Result</button>`;
     } else {
       saveBtn    = `<span class="badge bg-success fs-6 me-2">✅ Already Declared</span>`;
     }
