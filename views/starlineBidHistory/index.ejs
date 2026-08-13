@@ -1,5 +1,3 @@
-
-
 <div class="page-bar">
   <div class="page-title-breadcrumb">
     <ol class="breadcrumb page-breadcrumb pull-right">
@@ -12,9 +10,6 @@
     </ol>
   </div>
 </div>
-
-
-
 
 <!-- FILTER -->
 <div class="card mb-3">
@@ -48,7 +43,7 @@
         </div>
 
         <div class="col-md-2 mt-4">
-          <button class="btn btn-primary w-100">
+          <button type="submit" class="btn btn-primary w-100">
             Submit
           </button>
         </div>
@@ -79,87 +74,3 @@
     </table>
   </div>
 </div>
-
-<script>
-$(document).ready(function () {
-
-  const csrfToken = $("#csrf_token").val();
-
-  // ── DataTable — sirf ek baar init karo ──────────────────
-  let table = null;
-
-  function initTable(data) {
-    if ($.fn.DataTable.isDataTable("#bidTable")) {
-      $("#bidTable").DataTable().destroy();
-      $("#bidTable tbody").empty();
-    }
-
-    let sr = 1;
-    table = $("#bidTable").DataTable({
-      data: data,
-      processing: true,
-      ordering: true,
-      pageLength: 25,
-      columns: [
-        { data: null,         render: () => sr++ },
-        { data: "mobile",     defaultContent: "N/A" },
-        { data: "bid_txn_id", defaultContent: "N/A" },
-        { data: "game_name",  defaultContent: "N/A" },
-        { data: "game_type",  defaultContent: "N/A" },
-        {
-          data: null,
-          defaultContent: "N/A",
-          render: function (d, t, row) {
-            const gt = String(row.game_type || "").toLowerCase().trim();
-            const digitTypes = ["single digit", "odd even", "two digit panna"];
-            const isDigit = digitTypes.some(type => gt.includes(type));
-            return isDigit ? (row.pana || "N/A") : "N/A";
-          }
-        },
-        {
-          data: null,
-          defaultContent: "N/A",
-          render: function (d, t, row) {
-            const gt = String(row.game_type || "").toLowerCase().trim();
-            const digitTypes = ["single digit", "odd even", "two digit panna"];
-            const isDigit = digitTypes.some(type => gt.includes(type));
-            return !isDigit ? (row.pana || "N/A") : "N/A";
-          }
-        },
-        { data: "points",    defaultContent: "0" },
-        { data: "game_date", defaultContent: "N/A" }
-      ]
-    });
-  }
-
-  // ── Load data from API ───────────────────────────────────
-  function loadData() {
-    const payload = {
-      _csrf:       csrfToken,
-      result_date: $("#filter_date").val() || "",
-      game:        $("#filter_game").val() || "",
-      game_type:   $("#filter_type").val() || ""
-    };
-
-    $.post("/admin/starline-bid-history/data", payload)
-      .done(function (res) {
-        console.log("API response:", res);
-        initTable(res.status && res.data ? res.data : []);
-      })
-      .fail(function (xhr) {
-        console.error("Request failed:", xhr.status, xhr.responseText);
-        initTable([]);
-      });
-  }
-
-  // ── Page load pe seedha sab data load karo ─────────────
-  loadData();
-
-  // ── Filter submit ────────────────────────────────────────
-  $("#starlineBidFilterForm").on("submit", function (e) {
-    e.preventDefault();
-    loadData();
-  });
-
-});
-</script>

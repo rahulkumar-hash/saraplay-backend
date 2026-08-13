@@ -876,10 +876,11 @@ Starline Bid History
 ======================================================================================================*/
 
 let starlineBidTable = $('#bidTable').DataTable({
+  destroy: true,
   processing: true,
   serverSide: false,
-  pageLength: 10,
-  order: [[0, "desc"]],
+  pageLength: 25,
+  order: [],
   responsive: true,
 
   ajax: {
@@ -889,13 +890,15 @@ let starlineBidTable = $('#bidTable').DataTable({
       "CSRF-Token": csrfToken
     },
     data: function (d) {
-      d.result_date = $('input[name="result_date"]').val();
-      d.game = $('select[name="game"]').val();
-      d.game_type = $('select[name="game_type"]').val();
+      d.result_date = $('#filter_date').val();
+      d.game = $('#filter_game').val();
+      d.game_type = $('#filter_type').val();
     },
     dataSrc: function (res) {
-      if (res.status !== true) return [];
-      return res.data;
+      if (res && res.data && Array.isArray(res.data)) {
+        return res.data;
+      }
+      return [];
     }
   },
 
@@ -909,44 +912,70 @@ let starlineBidTable = $('#bidTable').DataTable({
     {
       data: 'mobile',
       render: (d, t, r) => `
-        ${d}
+        ${d || 'N/A'}
         <a href="/admin/single-user/${r.user_id}">
           <i class="fa fa-external-link"></i>
         </a>
       `
     },
 
-    { data: 'bid_txn_id' },
+    { data: 'bid_txn_id', defaultContent: 'N/A' },
 
-    { data: 'game_name' },
+    { data: 'game_name', defaultContent: 'N/A' },
 
-    { data: 'game_type' },
+    { data: 'game_type', defaultContent: 'N/A' },
 
     {
-      data: 'game_type',
-      render: (d, t, r) =>
-        d === 'Single Digit' ? r.pana : 'N/A'
+      data: null,
+      render: function (d, t, r) {
+        const rowData = (r && typeof r === 'object') ? r : ((d && typeof d === 'object') ? d : {});
+        const val = String(rowData.pana || rowData.digit || rowData.bid_on || "").trim();
+        if (!val) return "N/A";
+
+        const gt = String(rowData.game_type || "").toLowerCase().trim();
+        const isDigitType = (
+          gt === "single digit" ||
+          gt === "single digit bulk" ||
+          gt === "odd even"
+        );
+
+        return isDigitType ? val : "N/A";
+      }
     },
 
     {
-      data: 'game_type',
-      render: (d, t, r) =>
-        ['Single Pana','Double Pana','Triple Pana'].includes(d)
-          ? r.pana
-          : 'N/A'
+      data: null,
+      render: function (d, t, r) {
+        const rowData = (r && typeof r === 'object') ? r : ((d && typeof d === 'object') ? d : {});
+        const val = String(rowData.pana || rowData.digit || rowData.bid_on || "").trim();
+        if (!val) return "N/A";
+
+        const gt = String(rowData.game_type || "").toLowerCase().trim();
+        const isPanaType = (
+          gt.includes("pana") ||
+          gt.includes("panna") ||
+          gt === "sp" ||
+          gt === "dp" ||
+          gt === "tp" ||
+          gt.includes("moter")
+        );
+
+        return isPanaType ? val : "N/A";
+      }
     },
 
-    { data: 'points' },
+    { data: 'points', defaultContent: '0' },
 
-    { data: 'date' }
+    { data: 'game_date', defaultContent: 'N/A' }
 
   ]
 });
 
-
 $('#starlineBidFilterForm').on('submit', function (e) {
   e.preventDefault();
-  starlineBidTable.ajax.reload();
+  if (starlineBidTable && starlineBidTable.ajax) {
+    starlineBidTable.ajax.reload();
+  }
 });
 
 
