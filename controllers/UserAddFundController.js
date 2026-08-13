@@ -40,58 +40,56 @@ exports.addFund = async (req, res) => {
   try {
     const { user_id, amount } = req.body;
 
-    if (!user_id || !amount || amount <= 0) {
+    if (!user_id || !amount || Number(amount) <= 0) {
       return res.json({ res: "error", msg: "Invalid data" });
     }
 
-    // 1️⃣ Wallet update
-    await dbQuery(`
-      UPDATE "user"
-      SET wallet = COALESCE(wallet,0) + $1
-      WHERE id = $2
-    `, [amount, user_id]);
+    const amt = Number(amount);
 
-    // 2️⃣ Transaction log (recommended)
-    await dbQuery(`
-      INSERT INTO wallet_transaction
-      (user_id, amount, type, remark)
-      VALUES ($1,$2,'credit','Admin added fund')
-    `, [user_id, amount]);
+    // 1️⃣ Get current wallet balance
+    const lastWallet = await dbQuery(
+      `SELECT txn_clbal FROM wallet WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
+      [user_id]
+    );
+    const opening = lastWallet.rows.length ? Number(lastWallet.rows[0].txn_clbal) : 0;
+    const closing = opening + amt;
+    const txn_id  = Math.floor(10000000 + Math.random() * 90000000);
 
-    // 🔔 Deposit notification (Firebase — only if notif_deposit = 1)
+    // 2️⃣ Insert wallet transaction (same format as rest of app)
+    await dbQuery(
+      `INSERT INTO wallet
+       (user_id, txn_opbal, txn_crdt, txn_dbdt, txn_clbal, txn_comment, txn_date, transfer_user_id, transaction_id)
+       VALUES ($1, $2, $3, 0, $4, 'Direct Credit By Admin', NOW(), 'Admin', $5)`,
+      [user_id, opening, amt, closing, txn_id]
+    );
+
+    // 3️⃣ Push notification — only if notif_deposit = 1 and fcm_token exists
     try {
-      console.log(`🔍 [UserAddFundController.addFund] Checking deposit notif for User ID: ${user_id}`);
       const userNotif = await dbQuery(
-        `SELECT fcm_token, notif_deposit FROM users WHERE id = $1 LIMIT 1`,
+        `SELECT fcm_token, notif_deposit, name FROM users WHERE id = $1 LIMIT 1`,
         [user_id]
       );
-      console.log(`🔍 [UserAddFundController.addFund] DB Result:`, JSON.stringify(userNotif.rows[0] || null));
-      if (
-        userNotif.rows.length &&
-        userNotif.rows[0].fcm_token &&
-        Number(userNotif.rows[0].notif_deposit) === 1
-      ) {
+
+      const u = userNotif.rows[0];
+
+      if (u && u.fcm_token && Number(u.notif_deposit) === 1) {
         await sendSingleNotification(
-          userNotif.rows[0].fcm_token,
+          u.fcm_token,
           "✅ Fund Added Successfully",
-          `₹${amount} has been credited to your wallet by Admin.`
+          `₹${amt} credited to your wallet. New Balance: ₹${closing}`
         );
-        console.log(`📲 Deposit notification sent to User ID: ${user_id}`);
-      } else if (userNotif.rows.length && Number(userNotif.rows[0].notif_deposit) === 0) {
-        console.log(`🔕 Deposit notification OFF for User ID: ${user_id}, skipped`);
-      } else if (!userNotif.rows.length) {
-        console.log(`❌ User ID ${user_id} not found in users table`);
-      } else if (!userNotif.rows[0].fcm_token) {
-        console.log(`❌ FCM token missing for User ID: ${user_id}`);
+        console.log(`📲 Add Fund notification sent → User ID: ${user_id}`);
+      } else {
+        console.log(`🔕 Notification skipped → User ID: ${user_id} | fcm: ${u?.fcm_token ? 'yes' : 'no'} | notif_deposit: ${u?.notif_deposit}`);
       }
     } catch (notifErr) {
-      console.error("❌ Deposit Notification Error:", notifErr);
+      console.error("❌ Add Fund Notification Error:", notifErr.message);
     }
 
-    res.json({ res: "success", msg: "Fund added successfully" });
+    return res.json({ res: "success", msg: "Fund added successfully" });
 
   } catch (err) {
     console.error("Add fund error:", err);
-    res.json({ res: "error", msg: "Something went wrong" });
+    return res.json({ res: "error", msg: "Something went wrong" });
   }
 };
