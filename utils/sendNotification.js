@@ -162,9 +162,43 @@ const sendAll = async (topic, title, body) => {
   }
 };
 
+const dbQuery = require("./dbQuery");
+
+/**
+ * 📢 Complete Result Broadcast (Topic + Direct Webview/Android User Tokens)
+ */
+const sendResultBroadcastNotification = async (title, body) => {
+  try {
+    // 1. Broadcast to Topic "all"
+    try {
+      await sendAll("all", title, body);
+      console.log(`📲 [FCM BROADCAST TOPIC 'all'] Title: ${title} | Body: ${body}`);
+    } catch (tErr) {
+      console.error("❌ FCM Topic Broadcast Error:", tErr);
+    }
+
+    // 2. Direct Push to all registered user FCM Tokens (Android Webview / App users)
+    try {
+      const userTokens = await dbQuery(
+        `SELECT DISTINCT fcm_token FROM "users" WHERE fcm_token IS NOT NULL AND fcm_token != ''`
+      );
+      const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
+      if (tokens.length > 0) {
+        await sendBulkNotificationNew(tokens, title, body);
+        console.log(`📲 [FCM DIRECT TOKENS] Sent notification to ${tokens.length} active device tokens`);
+      }
+    } catch (uErr) {
+      console.error("❌ FCM Direct Token Error:", uErr);
+    }
+  } catch (err) {
+    console.error("❌ Result Broadcast Notification Error:", err);
+  }
+};
+
 module.exports = {
   sendSingleNotification,
   sendMultiNotification,
   sendBulkNotificationNew,
-  sendAll
+  sendAll,
+  sendResultBroadcastNotification
 };

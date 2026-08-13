@@ -1,4 +1,3 @@
-
 <div class="page-bar">
   <div class="page-title-breadcrumb">
     <ol class="breadcrumb page-breadcrumb pull-right">
@@ -12,8 +11,6 @@
   </div>
 </div>
 
-
-
 <div class="row">
 
   <!-- FILTER -->
@@ -23,7 +20,6 @@
          <h4 class="card-title">Filter Data</h4>
       </div>
       <div class="card-body">
-       
 
         <form id="jackpotDeclareFilterForm">
           <div class="row">
@@ -61,6 +57,9 @@
     </div>
   </div>
 
+  <!-- DECLARE FORM -->
+  <div id="jackpotFormContainer" class="col-md-12"></div>
+
   <!-- TABLE -->
   <div class="col-md-12">
     <div class="card">
@@ -74,6 +73,7 @@
               <th>Result Date</th>
               <th>Declare Date</th>
               <th>Result</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -84,3 +84,109 @@
   </div>
 
 </div>
+
+<!-- WINNER MODAL -->
+<div class="modal fade" id="jackpotWinnerModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Jackpot Winners</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="jackpotWinnerModalBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let jackpotDataTable;
+
+$(document).ready(function() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  $('#SubmitDate').attr("max", todayStr);
+
+  const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  jackpotDataTable = $('#jackpotDataTable').DataTable({
+    processing: true,
+    serverSide: false,
+    pageLength: 10,
+    order: [],
+    responsive: true,
+    ajax: {
+      url: '/admin/get-jackpot-declare-results',
+      type: 'POST',
+      headers: { 'CSRF-Token': getCsrfToken() },
+      data: function (d) {
+        d.date = $('#SubmitDate').val();
+        d.game_id = $('#game_id').val();
+      },
+      dataSrc: function (res) {
+        if (res.status !== true) return [];
+        return res.data;
+      }
+    },
+    columns: [
+      { data: null, render: (d, t, r, m) => m.row + 1 },
+      { data: 'game_name' },
+      { data: 'result_date' },
+      { data: 'declare_date', render: d => d ? d : '<span class="badge bg-warning text-dark">Pending</span>' },
+      { data: 'result', render: d => d ? `<b>${d}</b>` : '-' },
+      {
+        data: null,
+        render: r => `
+          <button class="btn btn-danger btn-sm" onclick="JackpotResultStatusDelete(${r.id})">
+            <i class="fa fa-trash"></i> Delete
+          </button>
+        `
+      }
+    ]
+  });
+
+  $('#jackpotDeclareFilterForm').on('submit', function (e) {
+    e.preventDefault();
+    const date = $('#SubmitDate').val();
+    const game_id = $('#game_id').val();
+
+    jackpotDataTable.ajax.reload();
+
+    if (date && game_id) {
+      $('#error').hide();
+      loadJackpotDeclareForm();
+    } else {
+      $('#jackpotFormContainer').html('<div class="alert alert-info">Please select Date and Game Name above to declare a result.</div>');
+    }
+  });
+
+  $(document).on('click', '#jackpotSaveBtn', function() {
+    saveJackpotResult();
+  });
+
+  $(document).on('click', '#jackpotDeclareBtn', function() {
+    declareJackpotResult();
+  });
+});
+
+function loadJackpotDeclareForm() {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  $.ajax({
+    url: '/admin/get-jackpot-declare-game',
+    type: 'POST',
+    headers: { 'CSRF-Token': csrfToken },
+    data: {
+      date: $('#SubmitDate').val(),
+      game_id: $('#game_id').val()
+    },
+    success: function(res) {
+      if (res.status && res.html) {
+        $('#jackpotFormContainer').html(res.html);
+      } else {
+        $('#jackpotFormContainer').html('<div class="alert alert-warning">' + (res.msg || 'Form load error') + '</div>');
+      }
+    },
+    error: function() {
+      $('#jackpotFormContainer').html('<div class="alert alert-danger">Server Error loading form</div>');
+    }
+  });
+}
+</script>

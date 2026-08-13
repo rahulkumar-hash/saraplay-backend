@@ -2,7 +2,8 @@ const dbQuery = require("../utils/dbQuery");
 const moment  = require("moment");
 const {
   sendAll,
-  sendSingleNotification
+  sendSingleNotification,
+  sendResultBroadcastNotification
 } = require("../utils/sendNotification");
 
 /* =========================
@@ -88,13 +89,13 @@ exports.getDeclareGame = async (req, res) => {
         <div class="card-body">
           <div class="row align-items-end">
             <div class="form-group col-md-4">
-              <label><b>Result Digit (0–9)</b></label>
+              <label><b>Result Digit (00–99)</b></label>
               <input
-                type="number"
+                type="text"
                 id="jackpotDigit"
                 class="form-control form-control-lg"
-                min="0" max="9"
-                placeholder="Enter digit 0-9"
+                maxlength="2"
+                placeholder="Enter result (00-99)"
                 value="${currentDigit}"
                 ${isDeclared ? 'readonly' : ''}
               >
@@ -126,18 +127,21 @@ exports.getDeclareResults = async (req, res) => {
   try {
     const { date, game_id } = req.body;
 
-    let where  = `WHERE 1=1`;
+    let where = " WHERE 1=1 ";
     let params = [];
-    let i      = 1;
+    let i = 1;
 
-    if (date) {
-      where += ` AND r.result_date = $${i++}`;
-      params.push(date);
+    if (date && date !== '') {
+      const d1 = moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("YYYY-MM-DD");
+      const d2 = moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("DD MMM YYYY");
+      where += ` AND (r.result_date = $${i} OR r.result_date = $${i+1})`;
+      params.push(d1, d2);
+      i += 2;
     }
 
-    if (game_id) {
+    if (game_id && !isNaN(parseInt(game_id))) {
       where += ` AND r.game_id = $${i++}`;
-      params.push(game_id);
+      params.push(parseInt(game_id));
     }
 
     const result = await dbQuery(`
@@ -146,11 +150,12 @@ exports.getDeclareResults = async (req, res) => {
         r.result,
         r.result_date,
         r.declare_date,
-        j.name AS game_name
+        COALESCE(j.name, 'Game #' || r.game_id::text) AS game_name
       FROM jackpot_declear_result r
-      JOIN jackpot j ON j.id = r.game_id
+      LEFT JOIN jackpot j ON j.id = r.game_id
       ${where}
       ORDER BY r.id DESC
+      LIMIT 500
     `, params);
 
     return res.json({
@@ -179,30 +184,35 @@ exports.saveResult = async (req, res) => {
       return res.json({ res: "error", msg: "All fields required" });
     }
 
+    // Disallow future dates
+    if (moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).isAfter(moment(), "day")) {
+      return res.json({ res: "error", msg: "Future dates are not allowed for result declaration" });
+    }
+
     const digit = String(result).trim();
 
-    // Validate digit 0-9
-    if (!/^[0-9]$/.test(digit)) {
-      return res.json({ res: "error", msg: "Result must be a single digit (0-9)" });
+    // Validate digit 00-99
+    if (!/^[0-9]{1,2}$/.test(digit)) {
+      return res.json({ res: "error", msg: "Result must be a number between 00 and 99" });
     }
 
     // Check existing
     const existing = await dbQuery(
-      `SELECT id FROM jackpot_declear_result WHERE game_id = $1 AND result_date = $2`,
-      [game_id, date]
+      `SELECT id FROM jackpot_declear_result WHERE game_id = $1 AND (result_date = $2 OR result_date = $3)`,
+      [game_id, moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("YYYY-MM-DD"), moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("DD MMM YYYY")]
     );
 
     if (existing.rows.length) {
       // Update
       await dbQuery(
-        `UPDATE jackpot_declear_result SET result = $1 WHERE game_id = $2 AND result_date = $3`,
-        [digit, game_id, date]
+        `UPDATE jackpot_declear_result SET result = $1 WHERE id = $2`,
+        [digit, existing.rows[0].id]
       );
     } else {
       // Insert
       await dbQuery(
-        `INSERT INTO jackpot_declear_result (game_id, result_date, result) VALUES ($1, $2, $3)`,
-        [game_id, date, digit]
+        `INSERT INTO jackpot_declear_result (game_id, result_date, result, declare_date, created_at) VALUES ($1, $2, $3, $4, NOW())`,
+        [game_id, date, digit, '']
       );
     }
 
@@ -230,10 +240,15 @@ exports.declareResult = async (req, res) => {
       return res.json({ res: "error", msg: "All fields required" });
     }
 
+    // Disallow future dates
+    if (moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).isAfter(moment(), "day")) {
+      return res.json({ res: "error", msg: "Future dates are not allowed for result declaration" });
+    }
+
     const digit = String(result).trim();
 
-    if (!/^[0-9]$/.test(digit)) {
-      return res.json({ res: "error", msg: "Result must be a single digit (0-9)" });
+    if (!/^[0-9]{1,2}$/.test(digit)) {
+      return res.json({ res: "error", msg: "Result must be a number between 00 and 99" });
     }
 
     // Check if already declared
@@ -258,8 +273,8 @@ exports.declareResult = async (req, res) => {
       );
     } else {
       await dbQuery(
-        `INSERT INTO jackpot_declear_result (game_id, result_date, result, declare_date)
-         VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO jackpot_declear_result (game_id, result_date, result, declare_date, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
         [game_id, date, digit, now]
       );
     }
@@ -293,7 +308,7 @@ exports.declareResult = async (req, res) => {
     try {
       const gameRes = await dbQuery(`SELECT name FROM jackpot WHERE id = $1`, [game_id]);
       const gameName = gameRes.rows[0]?.name || 'Jackpot';
-      await sendAll("all", `Jackpot Result: ${digit}`, `${gameName} Result Declared!`);
+      await sendResultBroadcastNotification(`Jackpot Result: ${digit}`, `${gameName} Result Declared!`);
     } catch (fcmErr) {
       console.error("FCM Error:", fcmErr);
     }

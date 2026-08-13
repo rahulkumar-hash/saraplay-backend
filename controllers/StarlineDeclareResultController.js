@@ -4,7 +4,8 @@ const dbQuery = require("../utils/dbQuery");
 const moment = require("moment");
 const {
   sendSingleNotification,
-  sendAll
+  sendAll,
+  sendResultBroadcastNotification
 } = require("../utils/sendNotification");
 /* =========================
    PAGE LOAD
@@ -31,9 +32,21 @@ exports.data = async (req, res) => {
   try {
     const { result_date, game_id } = req.body;
 
-    // ✅ Validate — both fields required and game_id must be a valid number
-    if (!result_date || !game_id || isNaN(parseInt(game_id))) {
-      return res.json({ status: false, data: [], msg: "Date and Game required" });
+    let where = `WHERE 1=1`;
+    let params = [];
+    let i = 1;
+
+    if (result_date && result_date.trim() !== "") {
+      const d1 = moment(result_date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("YYYY-MM-DD");
+      const d2 = moment(result_date, ["YYYY-MM-DD", "DD MMM YYYY"]).format("DD MMM YYYY");
+      where += ` AND (r.result_date = $${i} OR r.result_date = $${i+1})`;
+      params.push(d1, d2);
+      i += 2;
+    }
+
+    if (game_id && !isNaN(parseInt(game_id))) {
+      where += ` AND r.game_id = $${i++}`;
+      params.push(parseInt(game_id));
     }
 
     const result = await dbQuery(`
@@ -43,13 +56,13 @@ exports.data = async (req, res) => {
         r.digit,
         r.result_date,
         r.declare_date,
-        g.name AS game_name
+        COALESCE(g.name, 'Game #' || r.game_id::text) AS game_name
       FROM starline_declear_result r
-      JOIN starline_game g ON g.id = r.game_id::integer
-      WHERE r.result_date = $1
-        AND r.game_id = $2
+      LEFT JOIN starline_game g ON g.id = r.game_id::integer
+      ${where}
       ORDER BY r.id DESC
-    `, [result_date, parseInt(game_id)]);
+      LIMIT 500
+    `, params);
 
     res.json({
       status: true,
@@ -151,13 +164,13 @@ exports.getDeclareGame = async (req, res) => {
       </div>
 
       <div class="col-md-4 d-flex align-items-end gap-2 flex-wrap">
-        ${!isDeclared ? `<button class="btn btn-primary" onclick="saveStarlineResult()">
+        ${!isDeclared ? `<button class="btn btn-primary" id="slSaveBtn" onclick="saveStarlineResult()">
           <i class="fa fa-save"></i> Save
         </button>` : ""}
         <button class="btn btn-warning" onclick="quickView()">
           <i class="fa fa-eye"></i> Show Winner
         </button>
-        ${!isDeclared ? `<button class="btn btn-success" onclick="declareStarlineResult()">
+        ${!isDeclared ? `<button class="btn btn-success" id="slDeclareBtn" onclick="declareStarlineResult()">
           <i class="fa fa-check"></i> Declare
         </button>` : ""}
       </div>
@@ -293,10 +306,22 @@ exports.saveResult = async (req, res) => {
       return res.json({ res: "error", msg: "All fields are required" });
     }
 
+    // Disallow future dates
+    if (moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).isAfter(moment(), "day")) {
+      return res.json({ res: "error", msg: "Future dates are not allowed for result declaration" });
+    }
+
     const gid = parseInt(game_id);
     if (isNaN(gid)) {
       return res.json({ res: "error", msg: "Invalid game ID" });
     }
+
+    // Fetch game name / time from starline_game table
+    const gameRes = await dbQuery(
+      `SELECT name, open_time FROM starline_game WHERE id = $1`,
+      [gid]
+    );
+    const gameTime = gameRes.rows[0]?.name || gameRes.rows[0]?.open_time || "";
 
     // Check if result already exists for this date + game
     const existing = await dbQuery(
@@ -307,14 +332,14 @@ exports.saveResult = async (req, res) => {
     if (existing.rows.length) {
       // Update existing
       await dbQuery(
-        `UPDATE starline_declear_result SET pana=$1, digit=$2 WHERE result_date=$3 AND game_id=$4`,
-        [pana, digit, date, gid]
+        `UPDATE starline_declear_result SET pana=$1, digit=$2, game_time=$5 WHERE result_date=$3 AND game_id=$4`,
+        [pana, digit, date, gid, gameTime]
       );
     } else {
       // Insert new
       await dbQuery(
-        `INSERT INTO starline_declear_result (result_date, game_id, pana, digit) VALUES ($1, $2, $3, $4)`,
-        [date, gid, pana, digit]
+        `INSERT INTO starline_declear_result (result_date, game_id, pana, digit, game_time, declare_date, result) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [date, gid, pana, digit, gameTime, '', '']
       );
     }
 
@@ -343,28 +368,42 @@ exports.declareResult = async (req, res) => {
       return res.json({ res: "error", msg: "All fields are required" });
     }
 
+    // Disallow future dates
+    if (moment(date, ["YYYY-MM-DD", "DD MMM YYYY"]).isAfter(moment(), "day")) {
+      return res.json({ res: "error", msg: "Future dates are not allowed for result declaration" });
+    }
+
     const gid = parseInt(game_id);
     if (isNaN(gid)) {
       return res.json({ res: "error", msg: "Invalid game ID" });
     }
 
     // Fetch saved result
-    const resultRes = await dbQuery(
+    let resultRes = await dbQuery(
       `SELECT * FROM starline_declear_result WHERE result_date=$1 AND game_id=$2 ORDER BY id DESC LIMIT 1`,
       [date, gid]
     );
 
     if (!resultRes.rows.length) {
-      console.log(`❌ No saved result found for Date: ${date} | Game ID: ${gid}`);
-      return res.json({ res: "error", msg: "Please save result first before declaring" });
+      // Auto-save if not saved yet
+      const gameRes = await dbQuery(`SELECT name, open_time FROM starline_game WHERE id = $1`, [gid]);
+      const gameTime = gameRes.rows[0]?.name || gameRes.rows[0]?.open_time || "";
+      await dbQuery(
+        `INSERT INTO starline_declear_result (result_date, game_id, pana, digit, game_time, declare_date, result) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [date, gid, pana, digit, gameTime, '', '']
+      );
+      resultRes = await dbQuery(
+        `SELECT * FROM starline_declear_result WHERE result_date=$1 AND game_id=$2 ORDER BY id DESC LIMIT 1`,
+        [date, gid]
+      );
     }
 
     const savedResult = resultRes.rows[0];
 
     // Check if already declared
-    if (savedResult.declare_date) {
+    if (savedResult.declare_date && savedResult.declare_date.trim() !== '') {
       console.log(`⚠️ Result already declared for Date: ${date} | Game ID: ${gid}`);
-      return res.json({ res: "error", msg: "Result already declared" });
+      return res.json({ res: "error", msg: "Result already declared for this game and date" });
     }
 
     const now = moment().format("DD MMM YYYY hh:mm:ss A");
@@ -430,7 +469,7 @@ exports.declareResult = async (req, res) => {
     const notifBody  = `${gameName} Result Declared`;
 
     try {
-      await sendAll("all", notifTitle, notifBody);
+      await sendResultBroadcastNotification(notifTitle, notifBody);
       console.log(`📲 Broadcast Notification Sent: ${notifTitle} | ${notifBody}`);
     } catch (fcmErr) {
       console.error("❌ Starline FCM Broadcast Error:", fcmErr);

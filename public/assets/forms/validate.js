@@ -982,7 +982,7 @@ let starlineDeclareTable = $('#starlineDeclareTable').DataTable({
   processing: true,
   serverSide: false,
   pageLength: 10,
-  order: [[0, "desc"]],
+  order: [],
   responsive: true,
 
   ajax: {
@@ -1035,28 +1035,32 @@ let starlineDeclareTable = $('#starlineDeclareTable').DataTable({
 $('#starlineDeclareFilterForm').on('submit', function (e) {
   e.preventDefault();
 
-  if (!$('#SubmitDate').val() || !$('#game_id').val()) {
-    $('#error').removeClass('d-none');
-    setTimeout(() => $('#error').addClass('d-none'), 3000);
-    return;
+  if (typeof starlineDeclareTable !== 'undefined' && starlineDeclareTable.ajax) {
+    starlineDeclareTable.ajax.reload();
+  } else if ($.fn.DataTable.isDataTable('#starlineDeclareTable')) {
+    $('#starlineDeclareTable').DataTable().ajax.reload();
   }
 
-  starlineDeclareTable.ajax.reload();
-  loadDeclareForm();
+  if ($('#SubmitDate').val() && $('#game_id').val()) {
+    loadDeclareForm();
+  } else {
+    $('#dr').html('<div class="alert alert-info">Please select Date and Game Name above to declare a result.</div>');
+  }
 });
 
 
 /* =========================
    LOAD GAMES
 ========================= */
-$('#SubmitDate').val(today).attr("max", today);
+const todayStr = new Date().toISOString().slice(0, 10);
+$('#SubmitDate').attr("max", todayStr);
 
 $.get('/admin/manage-starline-games/data', res => {
-let html = '<option value="">Select Game</option>';
-res.data.forEach(g => {
-    html += `<option value="${g.id}">${g.name}</option>`;
-});
-$('#game_id').html(html);
+  let html = '<option value="">Select Game (All)</option>';
+  res.data.forEach(g => {
+      html += `<option value="${g.id}">${g.name}</option>`;
+  });
+  $('#game_id').html(html);
 });
 
 

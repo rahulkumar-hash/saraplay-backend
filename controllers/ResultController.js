@@ -7,7 +7,8 @@ const { formatResultDate } = require("../utils/dateHelper");
 const {
   sendSingleNotification,
   sendMultiNotification,
-  sendAll
+  sendAll,
+  sendResultBroadcastNotification
 } = require("../utils/sendNotification");
 
 
@@ -766,7 +767,7 @@ exports.declareResult = async (req, res) => {
       var body = (game.rows[0]?.name || 'Game') + ' Result';
 
       try {
-        await sendAll("all", title, body);
+        await sendResultBroadcastNotification(title, body);
         console.log(`📲 Broadcast Notification Sent: ${title}`);
       } catch (fcmErr) {
         console.error("❌ FCM Broadcast Error:", fcmErr);

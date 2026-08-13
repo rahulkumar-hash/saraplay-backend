@@ -718,6 +718,7 @@ function saveStarlineResult() {
   const digit = $('#digit').val();
   const date  = $('#SubmitDate').val();
   const game_id = $('#game_id').val();
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
   if (!pana || pana === '') {
     Swal.fire({ icon: 'warning', title: 'Please select a Pana first!' });
@@ -728,18 +729,26 @@ function saveStarlineResult() {
     return;
   }
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (date > todayStr) {
+    Swal.fire({ icon: 'warning', title: 'Future dates are not allowed for result declaration!' });
+    return;
+  }
+
   $('#slSaveBtn').prop('disabled', true).text('Saving...');
 
   $.ajax({
     url: '/admin/starline-declare-result/save',
     type: 'POST',
-    headers: { 'CSRF-Token': csrfToken },
+    headers: { 'CSRF-Token': token },
     data: { date, game_id, pana, digit },
     success: function (res) {
       $('#slSaveBtn').prop('disabled', false).text('Save');
       if (res.res === 'success') {
-        Swal.fire({ icon: 'success', title: res.msg, timer: 1500, showConfirmButton: false });
-        starlineDeclareTable.ajax.reload(null, false);
+        Swal.fire({ icon: 'success', title: res.msg, confirmButtonText: 'OK', confirmButtonColor: '#0d6efd' });
+        if ($.fn.DataTable.isDataTable('#starlineDeclareTable')) {
+          $('#starlineDeclareTable').DataTable().ajax.reload(null, false);
+        }
       } else {
         Swal.fire({ icon: 'error', title: res.msg });
       }
@@ -760,6 +769,7 @@ function declareStarlineResult() {
   const digit = $('#digit').val();
   const date  = $('#SubmitDate').val();
   const game_id = $('#game_id').val();
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
   if (!pana || pana === '') {
     Swal.fire({ icon: 'warning', title: 'Please select a Pana first!' });
@@ -767,6 +777,12 @@ function declareStarlineResult() {
   }
   if (!date || !game_id) {
     Swal.fire({ icon: 'warning', title: 'Please select Date and Game first!' });
+    return;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (date > todayStr) {
+    Swal.fire({ icon: 'warning', title: 'Future dates are not allowed for result declaration!' });
     return;
   }
 
@@ -785,19 +801,134 @@ function declareStarlineResult() {
     $.ajax({
       url: '/admin/starline-declare-result/declare',
       type: 'POST',
-      headers: { 'CSRF-Token': csrfToken },
+      headers: { 'CSRF-Token': token },
       data: { date, game_id, pana, digit },
       success: function (res) {
         $('#slDeclareBtn').prop('disabled', false).text('Declare');
         if (res.res === 'success') {
-          Swal.fire({ icon: 'success', title: res.msg, timer: 2000, showConfirmButton: false });
-          starlineDeclareTable.ajax.reload(null, false);
+          Swal.fire({ icon: 'success', title: res.msg, confirmButtonText: 'OK', confirmButtonColor: '#0d6efd' });
+          if ($.fn.DataTable.isDataTable('#starlineDeclareTable')) {
+            $('#starlineDeclareTable').DataTable().ajax.reload(null, false);
+          }
+          loadDeclareForm();
         } else {
           Swal.fire({ icon: 'error', title: res.msg });
         }
       },
       error: function () {
         $('#slDeclareBtn').prop('disabled', false).text('Declare');
+        Swal.fire({ icon: 'error', title: 'Server Error. Please try again.' });
+      }
+    });
+  });
+}
+
+
+/* =========================
+   SAVE JACKPOT RESULT
+========================= */
+function saveJackpotResult() {
+  const result = $('#jackpotDigit').val();
+  const date   = $('#SubmitDate').val();
+  const game_id = $('#game_id').val();
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  if (result === undefined || result === '') {
+    Swal.fire({ icon: 'warning', title: 'Please enter a result digit (0-9)!' });
+    return;
+  }
+  if (!date || !game_id) {
+    Swal.fire({ icon: 'warning', title: 'Please select Date and Game first!' });
+    return;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (date > todayStr) {
+    Swal.fire({ icon: 'warning', title: 'Future dates are not allowed for result declaration!' });
+    return;
+  }
+
+  $('#jackpotSaveBtn').prop('disabled', true).text('Saving...');
+
+  $.ajax({
+    url: '/admin/jackpot-save-result',
+    type: 'POST',
+    headers: { 'CSRF-Token': token },
+    data: { date, game_id, result },
+    success: function (res) {
+      $('#jackpotSaveBtn').prop('disabled', false).text('Save');
+      if (res.res === 'success') {
+        Swal.fire({ icon: 'success', title: res.msg, confirmButtonText: 'OK', confirmButtonColor: '#0d6efd' });
+        if ($.fn.DataTable.isDataTable('#jackpotDataTable')) {
+          $('#jackpotDataTable').DataTable().ajax.reload(null, false);
+        }
+      } else {
+        Swal.fire({ icon: 'error', title: res.msg });
+      }
+    },
+    error: function () {
+      $('#jackpotSaveBtn').prop('disabled', false).text('Save');
+      Swal.fire({ icon: 'error', title: 'Server Error. Please try again.' });
+    }
+  });
+}
+
+
+/* =========================
+   DECLARE JACKPOT RESULT
+========================= */
+function declareJackpotResult() {
+  const result = $('#jackpotDigit').val();
+  const date   = $('#SubmitDate').val();
+  const game_id = $('#game_id').val();
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  if (result === undefined || result === '') {
+    Swal.fire({ icon: 'warning', title: 'Please enter a result digit (0-9)!' });
+    return;
+  }
+  if (!date || !game_id) {
+    Swal.fire({ icon: 'warning', title: 'Please select Date and Game first!' });
+    return;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (date > todayStr) {
+    Swal.fire({ icon: 'warning', title: 'Future dates are not allowed for result declaration!' });
+    return;
+  }
+
+  Swal.fire({
+    title: 'Declare Jackpot Result?',
+    html: `Digit: <strong>${result}</strong><br>This will credit winning amounts to all winners and send notifications.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Declare!',
+    cancelButtonText: 'Cancel'
+  }).then(resObj => {
+    if (!resObj.isConfirmed) return;
+
+    $('#jackpotDeclareBtn').prop('disabled', true).text('Declaring...');
+
+    $.ajax({
+      url: '/admin/jackpot-declare-result',
+      type: 'POST',
+      headers: { 'CSRF-Token': token },
+      data: { date, game_id, result },
+      success: function (res) {
+        $('#jackpotDeclareBtn').prop('disabled', false).text('Declare Result');
+        if (res.res === 'success') {
+          Swal.fire({ icon: 'success', title: res.msg, confirmButtonText: 'OK', confirmButtonColor: '#0d6efd' });
+          if ($.fn.DataTable.isDataTable('#jackpotDataTable')) {
+            $('#jackpotDataTable').DataTable().ajax.reload(null, false);
+          }
+          loadJackpotDeclareForm();
+        } else {
+          Swal.fire({ icon: 'error', title: res.msg });
+        }
+      },
+      error: function () {
+        $('#jackpotDeclareBtn').prop('disabled', false).text('Declare Result');
         Swal.fire({ icon: 'error', title: 'Server Error. Please try again.' });
       }
     });
