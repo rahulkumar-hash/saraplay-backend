@@ -20,9 +20,9 @@ exports.getJackpotGames = async (req, res) => {
 
     for (let game of games) {
       // Check if result DECLARED (not just saved) today
-      // declare_date must be non-null and non-empty to count as declared
       const resultData = await dbQuery(
-        `SELECT result FROM jackpot_declear_result 
+        `SELECT result, declare_date
+         FROM jackpot_declear_result 
          WHERE game_id = $1
            AND result_date::date = $2::date
            AND declare_date IS NOT NULL 
@@ -32,20 +32,29 @@ exports.getJackpotGames = async (req, res) => {
       );
 
       if (resultData.rows.length > 0) {
-        // Result declared → always closed
+        const declaredResult = resultData.rows[0].result || "";
+
+        // result is a 2-digit number like "99", "07"
+        // pana  = full result value (jackpot has no separate pana, reuse result)
+        // digit = result value (same)
         game.market_status = false;
-        game.result        = resultData.rows[0].result || "";
+        game.result        = declaredResult;
+        game.pana          = declaredResult;
+        game.digit         = declaredResult;
+        game.declare_date  = resultData.rows[0].declare_date || "";
       } else {
         // Not declared yet → check current time vs close_time
         game.market_status = currentTime < game.close_time;
         game.result        = "";
+        game.pana          = "";
+        game.digit         = "";
+        game.declare_date  = "";
       }
     }
 
     res.json({
       status:       true,
       message:      "Jackpot Games Loaded Successfully",
-      current_time: currentTime,   // e.g. "18:40" — confirm this matches IST
       result:       games,
     });
   } catch (error) {
@@ -964,4 +973,131 @@ exports.jackpotGameChart = async (req, res) => {
   //   res.json({status:false,message:error.message})
 
   // }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/jackpot/result-chart
+// Chart: rows = dates (last N days), columns = jackpot games (sorted by close_time)
+// Cell value = declared result ("07","99") or "" if not declared yet
+// ─────────────────────────────────────────────────────────────────────────────
+exports.jackpotResultChart = async (req, res) => {
+  try {
+    // ── Auth check ────────────────────────────────────────────────────────────
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ status: false, message: "Unauthorized" });
+    }
+
+    // ── Params ────────────────────────────────────────────────────────────────
+    // days  → how many past days to show (default 30)
+    // from  → custom start date YYYY-MM-DD (optional)
+    // to    → custom end date   YYYY-MM-DD (optional, default today)
+    const days = parseInt(req.query.days || req.body?.days) || 30;
+    const fromParam = req.query.from || req.body?.from || null;
+    const toParam   = req.query.to   || req.body?.to   || null;
+
+    // ── Date range ────────────────────────────────────────────────────────────
+    const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // "YYYY-MM-DD"
+
+    const endDate   = toParam   || todayIST;
+    const startDate = fromParam
+      ? fromParam
+      : (() => {
+          const d = new Date(endDate);
+          d.setDate(d.getDate() - (days - 1));
+          return d.toISOString().slice(0, 10);
+        })();
+
+    // ── 1. All active jackpot games sorted by close_time ─────────────────────
+    const gamesRes = await dbQuery(
+      `SELECT id, name, close_time
+       FROM jackpot
+       WHERE status = true
+       ORDER BY close_time ASC`
+    );
+    const games = gamesRes.rows; // [{id, name, close_time}, ...]
+
+    if (games.length === 0) {
+      return res.json({
+        status:  false,
+        message: "No jackpot games found",
+        games:   [],
+        dates:   [],
+        chart:   [],
+      });
+    }
+
+    // ── 2. All declared results in date range ─────────────────────────────────
+    const resultsRes = await dbQuery(
+      `SELECT game_id, result_date, result, declare_date
+       FROM jackpot_declear_result
+       WHERE result_date::date BETWEEN $1 AND $2
+       ORDER BY result_date DESC`,
+      [startDate, endDate]
+    );
+
+    // Build lookup map: { "YYYY-MM-DD_gameId": result }
+    const resultMap = {};
+    resultsRes.rows.forEach((row) => {
+      // result_date may be stored as "YYYY-MM-DD" or timestamp — normalise to YYYY-MM-DD
+      const dateKey = String(row.result_date).slice(0, 10);
+      const key     = `${dateKey}_${row.game_id}`;
+      // Only count as declared if declare_date is filled
+      if (row.declare_date && row.declare_date !== "") {
+        resultMap[key] = row.result || "**";
+      }
+    });
+
+    // ── 3. Build date list (newest first) ─────────────────────────────────────
+    const dateList = [];
+    const cursor   = new Date(endDate);
+    const stop     = new Date(startDate);
+    while (cursor >= stop) {
+      dateList.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    // ── 4. Build chart rows ───────────────────────────────────────────────────
+    // Each row: { date: "13-08-2026", results: { gameId: "07", ... } }
+    const chart = dateList.map((dateStr) => {
+      // Display format: "DD-MM-YYYY"
+      const [y, m, d] = dateStr.split("-");
+      const displayDate = `${d}-${m}-${y}`;
+
+      const results = {};
+      games.forEach((game) => {
+        const key = `${dateStr}_${game.id}`;
+        results[game.id] = resultMap[key] || "";   // "" = not declared
+      });
+
+      return {
+        date:         displayDate,      // "13-08-2026"
+        date_iso:     dateStr,          // "2026-08-13"
+        results,                        // { 17: "07", 18: "99" }
+      };
+    });
+
+    // ── 5. Games header info for frontend columns ─────────────────────────────
+    const gameHeaders = games.map((g) => ({
+      id:         g.id,
+      name:       g.name,
+      close_time: g.close_time,   // "22:30" or "10:30" — frontend shows as column header
+    }));
+
+    return res.json({
+      status:  true,
+      message: "Jackpot Result Chart Loaded",
+      from:    startDate,
+      to:      endDate,
+      games:   gameHeaders,   // column headers
+      chart,                  // rows
+    });
+
+  } catch (error) {
+    console.error("Jackpot Result Chart Error:", error);
+    return res.status(500).json({
+      status:  false,
+      message: "Server Error",
+      error:   error.message,
+    });
+  }
 };

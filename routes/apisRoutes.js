@@ -280,6 +280,7 @@ router.post("/jackpot/place-bids", jwtAuth, JackpotController.addBulkBids);
 router.post("/jackpot/bid-history", jwtAuth, JackpotController.jackpotBidHistory);
 router.post("/jackpot/win-history", jwtAuth, JackpotController.jackpotWinHistory);
 router.post("/jackpot/game-chart", jwtAuth, JackpotController.jackpotGameChart);
+router.get("/jackpot/result-chart", jwtAuth, JackpotController.jackpotResultChart);
 
 
 

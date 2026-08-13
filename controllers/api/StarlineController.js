@@ -11,15 +11,19 @@ exports.starlineGetGames = async (req, res) => {
       });
     }
 
-    // 📅 Today's date (same format as PHP)
-    const now = new Date();
-    const cdate = now.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    // ── IST current time in HH:MM AM/PM ──────────────────────────────────
+    const istNow      = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate     = new Date(istNow);
+    const hh          = istDate.getHours();
+    const mm          = String(istDate.getMinutes()).padStart(2, "0");
+    const ampm        = hh >= 12 ? "pm" : "am";
+    const hh12        = hh % 12 === 0 ? 12 : hh % 12;
+    const currentTime = `${String(hh12).padStart(2, "0")}:${mm} ${ampm}`; // "11:30 am"
 
-    // ✅ Get active games sorted by open_time (AM/PM safe sort)
+    // ── Today's date in IST → YYYY-MM-DD (matches DB result_date format) ──
+    const todayISO = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+    // ── Active games sorted by open_time ──────────────────────────────────
     const games = await dbQuery(`
       SELECT *
       FROM starline_game
@@ -28,43 +32,65 @@ exports.starlineGetGames = async (req, res) => {
     `);
 
     if (games.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Data Not Found",
-      });
+      return res.json({ status: false, message: "Data Not Found" });
     }
 
-    // ✅ Get today's declared results
+    // ── Today's declared results (result_date stored as YYYY-MM-DD) ───────
     const results = await dbQuery(
       `SELECT game_id, pana, digit
        FROM starline_declear_result
-       WHERE result_date=$1
-       AND declare_date IS NOT NULL
-       AND declare_date!=''`,
-      [cdate],
+       WHERE result_date = $1
+         AND declare_date IS NOT NULL
+         AND declare_date != ''`,
+      [todayISO],
     );
 
-    // 🔥 Create map for fast lookup
+    // Fast lookup map: game_id → { pana, digit }
     const resultMap = {};
     results.rows.forEach((r) => {
       resultMap[r.game_id] = r;
     });
 
-    // ✅ Merge data
+    // ── Merge: add pana, digit and market_status per game ─────────────────
     const finalData = games.rows.map((game) => {
-      const result = resultMap[game.id];
+      const declared = resultMap[game.id];
+
+      // market_status: closed if admin disabled OR result declared OR time passed
+      const isAdminDisabled = game.market_status === "false" || game.market_status === false;
+      const isResultDeclared = !!declared;
+
+      // Compare current IST time with game open_time (both "HH:MM am/pm" format)
+      const toMins = (t) => {
+        if (!t) return 9999;
+        const [time, mod] = t.trim().toLowerCase().split(" ");
+        let [h, m] = time.split(":").map(Number);
+        if (mod === "pm" && h !== 12) h += 12;
+        if (mod === "am" && h === 12) h = 0;
+        return h * 60 + m;
+      };
+      const nowMins  = toMins(currentTime);
+      const openMins = toMins(game.open_time);
+      const timePassed = nowMins >= openMins;
+
+      let market_status;
+      if (isAdminDisabled || isResultDeclared || timePassed) {
+        market_status = false;
+      } else {
+        market_status = true;
+      }
 
       return {
         ...game,
-        pana: result ? result.pana : "",
-        digit: result ? result.digit : "",
+        market_status,
+        pana:  declared ? declared.pana  : "",
+        digit: declared ? declared.digit : "",
       };
     });
 
     return res.json({
-      status: true,
+      status:  true,
       message: "Data Found",
-      result: finalData,
+      result:  finalData,
     });
   } catch (error) {
     console.error("Starline Get Games Error:", error);
