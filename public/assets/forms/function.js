@@ -711,6 +711,101 @@ function loadDeclareForm() {
 
 
 /* =========================
+   SAVE STARLINE RESULT
+========================= */
+function saveStarlineResult() {
+  const pana  = $('#pana').val();
+  const digit = $('#digit').val();
+  const date  = $('#SubmitDate').val();
+  const game_id = $('#game_id').val();
+
+  if (!pana || pana === '') {
+    Swal.fire({ icon: 'warning', title: 'Please select a Pana first!' });
+    return;
+  }
+  if (!date || !game_id) {
+    Swal.fire({ icon: 'warning', title: 'Please select Date and Game first!' });
+    return;
+  }
+
+  $('#slSaveBtn').prop('disabled', true).text('Saving...');
+
+  $.ajax({
+    url: '/admin/starline-declare-result/save',
+    type: 'POST',
+    headers: { 'CSRF-Token': csrfToken },
+    data: { date, game_id, pana, digit },
+    success: function (res) {
+      $('#slSaveBtn').prop('disabled', false).text('Save');
+      if (res.res === 'success') {
+        Swal.fire({ icon: 'success', title: res.msg, timer: 1500, showConfirmButton: false });
+        starlineDeclareTable.ajax.reload(null, false);
+      } else {
+        Swal.fire({ icon: 'error', title: res.msg });
+      }
+    },
+    error: function () {
+      $('#slSaveBtn').prop('disabled', false).text('Save');
+      Swal.fire({ icon: 'error', title: 'Server Error. Please try again.' });
+    }
+  });
+}
+
+
+/* =========================
+   DECLARE STARLINE RESULT
+========================= */
+function declareStarlineResult() {
+  const pana  = $('#pana').val();
+  const digit = $('#digit').val();
+  const date  = $('#SubmitDate').val();
+  const game_id = $('#game_id').val();
+
+  if (!pana || pana === '') {
+    Swal.fire({ icon: 'warning', title: 'Please select a Pana first!' });
+    return;
+  }
+  if (!date || !game_id) {
+    Swal.fire({ icon: 'warning', title: 'Please select Date and Game first!' });
+    return;
+  }
+
+  Swal.fire({
+    title: 'Declare Starline Result?',
+    html: `Pana: <strong>${pana}</strong> | Digit: <strong>${digit}</strong><br>This will credit winning amounts to all winners.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Declare!',
+    cancelButtonText: 'Cancel'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    $('#slDeclareBtn').prop('disabled', true).text('Declaring...');
+
+    $.ajax({
+      url: '/admin/starline-declare-result/declare',
+      type: 'POST',
+      headers: { 'CSRF-Token': csrfToken },
+      data: { date, game_id, pana, digit },
+      success: function (res) {
+        $('#slDeclareBtn').prop('disabled', false).text('Declare');
+        if (res.res === 'success') {
+          Swal.fire({ icon: 'success', title: res.msg, timer: 2000, showConfirmButton: false });
+          starlineDeclareTable.ajax.reload(null, false);
+        } else {
+          Swal.fire({ icon: 'error', title: res.msg });
+        }
+      },
+      error: function () {
+        $('#slDeclareBtn').prop('disabled', false).text('Declare');
+        Swal.fire({ icon: 'error', title: 'Server Error. Please try again.' });
+      }
+    });
+  });
+}
+
+
+/* =========================
    DELETE RESULT
 ========================= */
 function deleteResult(id) {

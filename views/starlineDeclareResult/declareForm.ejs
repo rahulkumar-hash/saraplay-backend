@@ -1,18 +1,64 @@
 <div class="card">
-<div class="card-body">
-<h5>Declare Result - <%= game.name %></h5>
+  <div class="card-body">
+    <h5 class="card-title">Declare Result — <strong><%= game.name %></strong></h5>
 
-<div class="row">
-<div class="col-md-6">
-<label>Pana</label>
-<input class="form-control" id="pana">
-</div>
-<div class="col-md-6">
-<label>Digit</label>
-<input class="form-control" id="digit" readonly>
-</div>
+    <div class="row g-3 mt-1">
+
+      <div class="col-md-4">
+        <label class="form-label">Pana</label>
+        <select class="form-control" id="pana">
+          <option value="" disabled selected>Select Pana</option>
+          <% const pannas = [
+            "000","100","110","111","112","113","114","115","116","117","118","119",
+            "120","122","123","124","125","126","127","128","129","130","133","134",
+            "135","136","137","138","139","140","144","145","146","147","148","149",
+            "150","155","156","157","158","159","160","166","167","168","169","170",
+            "177","178","179","180","188","189","190","199","200","211","220","222",
+            "223","224","225","226","227","228","229","230","233","234","235","236",
+            "237","238","239","240","244","245","246","247","248","249","250","255",
+            "256","257","258","259","260","266","267","268","269","270","277","278",
+            "279","280","288","289","290","299","300","330","333","334","335","336",
+            "337","338","339","340","344","345","346","347","348","349","350","355",
+            "356","357","358","359","360","366","367","368","369","370","377","378",
+            "379","380","388","389","390","399","400","440","444","445","446","447",
+            "448","449","450","455","456","457","458","459","460","466","467","468",
+            "469","470","477","478","479","480","488","489","490","499","500","550",
+            "555","556","557","558","559","560","566","567","568","569","570","577",
+            "578","579","580","588","589","590","599","600","660","666","667","668",
+            "669","670","677","678","679","680","688","689","690","699","700","770",
+            "777","778","779","780","788","789","790","799","800","880","888","889",
+            "890","899","900","990","999"
+          ]; %>
+          <% pannas.forEach(p => { %>
+            <option value="<%= p %>"><%= p %></option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Digit</label>
+        <input type="text" class="form-control" id="digit" readonly placeholder="Auto">
+      </div>
+
+      <div class="col-md-4 d-flex align-items-end gap-2">
+        <button class="btn btn-primary" id="slSaveBtn" onclick="saveStarlineResult()">Save</button>
+        <button class="btn btn-warning" onclick="quickView()">Show Winner</button>
+        <button class="btn btn-success" id="slDeclareBtn" onclick="declareStarlineResult()">Declare</button>
+      </div>
+
+    </div>
+  </div>
 </div>
 
-<button class="btn btn-info mt-3" onclick="quickView()">Quick View</button>
-</div>
-</div>
+<script>
+/* Auto-calculate digit from pana */
+document.getElementById('pana').addEventListener('change', function () {
+  const p = this.value;
+  if (p && p.length === 3) {
+    const digit = (parseInt(p[0]) + parseInt(p[1]) + parseInt(p[2])) % 10;
+    document.getElementById('digit').value = digit;
+  } else {
+    document.getElementById('digit').value = '';
+  }
+});
+</script>

@@ -457,6 +457,8 @@ router.post("/starline-declare-result/data", csrfProtection, authMiddleware, Sta
 router.post("/starline-declare-result/get-game", csrfProtection, authMiddleware, StarlineDeclareResultController.getDeclareGame);
 router.post("/starline-declare-result/show-winner", csrfProtection, authMiddleware, StarlineDeclareResultController.showWinner);
 router.post("/starline-declare-result/delete", csrfProtection, authMiddleware, StarlineDeclareResultController.deleteResult);
+router.post("/starline-declare-result/save", csrfProtection, authMiddleware, StarlineDeclareResultController.saveResult);
+router.post("/starline-declare-result/declare", csrfProtection, authMiddleware, StarlineDeclareResultController.declareResult);
 
 
 /* =========================
