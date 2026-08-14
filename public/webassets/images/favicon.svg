@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5d020;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#f0a500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c8860a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0a0a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background circle -->
+  <circle cx="32" cy="32" r="32" fill="url(#bgGrad)"/>
+
+  <!-- Crown shape -->
+  <!-- Crown base bar -->
+  <rect x="12" y="36" width="40" height="7" rx="2" fill="url(#goldGrad)"/>
+  <!-- Crown left point -->
+  <polygon points="12,36 14,20 21,30 26,16 32,28" fill="url(#goldGrad)"/>
+  <!-- Crown right point -->
+  <polygon points="52,36 50,20 43,30 38,16 32,28" fill="url(#goldGrad)"/>
+  <!-- Crown middle peak -->
+  <polygon points="22,36 32,18 42,36" fill="url(#goldGrad)"/>
+
+  <!-- Crown gems / dots -->
+  <circle cx="14" cy="20" r="2.5" fill="#fff8dc"/>
+  <circle cx="32" cy="17" r="2.5" fill="#fff8dc"/>
+  <circle cx="50" cy="20" r="2.5" fill="#fff8dc"/>
+
+  <!-- Letter R -->
+  <text x="32" y="57" font-family="Georgia, serif" font-size="13" font-weight="bold"
+        fill="url(#goldGrad)" text-anchor="middle" letter-spacing="1">RG</text>
+</svg>
