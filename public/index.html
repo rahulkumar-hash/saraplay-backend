@@ -115,5 +115,35 @@
     updateClock();
     setInterval(updateClock, 1000);
   </script>
+
+  <script>
+    // Dynamically load Call & WhatsApp numbers from admin Contact Setting
+    (function () {
+      fetch('/webapi/settings')
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          var contact = json && json.data;
+          if (!contact) return;
+
+          var mobile   = (contact.mobile   || '').trim();
+          var whatsapp = (contact.whatsapp || contact.mobile || '').trim();
+
+          if (mobile) {
+            document.querySelectorAll('a[href^="tel:"]').forEach(function (el) {
+              el.href = 'tel:+91' + mobile;
+            });
+          }
+
+          if (whatsapp) {
+            document.querySelectorAll('a[href^="https://wa.me/"]').forEach(function (el) {
+              el.href = 'https://wa.me/91' + whatsapp;
+            });
+          }
+        })
+        .catch(function (err) {
+          console.warn('Contact settings fetch failed:', err);
+        });
+    })();
+  </script>
 </body>
 </html>
