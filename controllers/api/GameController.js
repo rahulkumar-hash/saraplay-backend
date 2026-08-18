@@ -993,7 +993,7 @@ exports.getGameJodiChart = async (req, res) => {
     const moment = require("moment");
 
     const gamesRes = await dbQuery(
-      `SELECT id, name, hname, open_time, close_time FROM game WHERE status=true ORDER BY name ASC`
+      `SELECT id, name, hname, open_time, close_time FROM game WHERE status::text = 'true' OR status::text = '1' ORDER BY name ASC`
     );
     const games = gamesRes.rows;
 
@@ -1012,9 +1012,9 @@ exports.getGameJodiChart = async (req, res) => {
     const resultsRes = await dbQuery(
       `SELECT id, game_id, result_date, open_digit, close_digit, open_result, close_result
        FROM declear_result
-       WHERE game_id=$1
+       WHERE game_id::text = $1::text
        ORDER BY id DESC`,
-      [selectedGame.id]
+      [String(selectedGame.id)]
     );
 
     const resultMap = {};
@@ -1110,7 +1110,7 @@ exports.getGamePanelChart = async (req, res) => {
     const moment = require("moment");
 
     const gamesRes = await dbQuery(
-      `SELECT id, name, hname, open_time, close_time FROM game WHERE status=true ORDER BY name ASC`
+      `SELECT id, name, hname, open_time, close_time FROM game WHERE status::text = 'true' OR status::text = '1' ORDER BY name ASC`
     );
     const games = gamesRes.rows;
 
@@ -1129,9 +1129,9 @@ exports.getGamePanelChart = async (req, res) => {
     const resultsRes = await dbQuery(
       `SELECT id, game_id, result_date, open_pana, open_digit, close_digit, close_pana, open_result, close_result
        FROM declear_result
-       WHERE game_id=$1
+       WHERE game_id::text = $1::text
        ORDER BY id DESC`,
-      [selectedGame.id]
+      [String(selectedGame.id)]
     );
 
     const resultMap = {};
