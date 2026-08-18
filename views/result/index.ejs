@@ -157,74 +157,46 @@
     </div>
 </div>
 
-<!-- JS SAME AS CI3 -->
+<!-- JS -->
 <script>
-    $(document).ready(function () {
-        let now = new Date();
-        let day = ("0" + now.getDate()).slice(-2);
-        let month = ("0" + (now.getMonth() + 1)).slice(-2);
-        let today = now.getFullYear() + "-" + month + "-" + day;
-
-        $('#SubmitDate').val(today).attr("max", today);
-        $('#pick_date').attr("max", today);
-    });
-</script>
-
-
-<script>
-    $(document).ready(function () {
-
-        // =====================
-        // SET TODAY
-        // =====================
+    function getTodayDate() {
         const now = new Date();
         const day = ("0" + now.getDate()).slice(-2);
         const month = ("0" + (now.getMonth() + 1)).slice(-2);
-        const today = now.getFullYear() + "-" + month + "-" + day;
+        return now.getFullYear() + "-" + month + "-" + day;
+    }
 
-        $('#SubmitDate').val(today).attr("max", today);
-        $('#pick_date').val(today).attr("max", today);
-
-        // =====================
-        // INITIAL LOAD
-        // =====================
-        loadGames();
-        loadHistory(today);
-
-        // =====================
-        // DATE CHANGE → AUTO LOAD
-        // =====================
-        $('#pick_date').on('change', function () {
-            const date = $(this).val();
-            if (date) {
-                loadHistory(date);
+    /* =====================
+       LOAD GAMES (AJAX)
+    ===================== */
+    function loadGames(date) {
+        const targetDate = date || $('#SubmitDate').val() || getTodayDate();
+        $.get('/admin/get-games-for-declare', { date: targetDate }, function (res) {
+            let html = '<option disabled selected>Select Game Name</option>';
+            if (Array.isArray(res) && res.length) {
+                res.forEach(g => {
+                    html += `
+                    <option value="${g.id}">
+                        ${g.name} (${g.open_time}-${g.close_time})
+                    </option>`;
+                });
+            } else {
+                html += '<option disabled>No games available to declare</option>';
             }
+            $('#game_id_list').html(html);
         });
-
-        // =====================
-        // OPTIONAL: BUTTON CLICK
-        // =====================
-        $('#getHistory').on('click', function () {
-            const date = $('#pick_date').val();
-            if (date) {
-                loadHistory(date);
-            }
-        });
-    });
+    }
 
     /* =====================
        LOAD HISTORY (AJAX)
     ===================== */
     function loadHistory(date) {
-
         $.ajax({
             url: '/admin/get-result-history',
             type: 'POST',
             data: { pick_date: date },
             success: function (res) {
-
                 let html = '';
-
                 if (res.status && res.data.length) {
                     res.data.forEach((v, i) => {
                         html += `
@@ -236,7 +208,6 @@
                             <td>${v.close_declare_date || ''}</td>
                             <td>
                                 ${v.open_pana}-${v.open_digit}
-
                                 ${
                                     v.open_declare_date != null
                                     ? `<button 
@@ -253,7 +224,6 @@
                                     v.close_digit
                                     ? `
                                         ${v.close_digit}-${v.close_pana}
-
                                         ${
                                             v.close_declare_date != null
                                             ? `<button 
@@ -280,49 +250,58 @@
                     </tr>
                 `;
                 }
-
                 $('#historyBody').html(html);
             }
         });
     }
 
-    /* =====================
-       LOAD GAMES
-    ===================== */
-    function loadGames() {
-        $.get('/admin/get-games-for-declare', function (res) {
-            let html = '<option disabled selected>Select Game Name</option>';
-            res.forEach(g => {
-                html += `
-                <option value="${g.id}">
-                    ${g.name} (${g.open_time}-${g.close_time})
-                </option>`;
-            });
-            $('#game_id_list').html(html);
+    $(document).ready(function () {
+        const today = getTodayDate();
+
+        $('#SubmitDate').val(today).attr("max", today);
+        $('#pick_date').val(today).attr("max", today);
+
+        // INITIAL LOAD
+        loadGames(today);
+        loadHistory(today);
+
+        // SUBMIT DATE CHANGE → RELOAD GAMES
+        $('#SubmitDate').on('change', function () {
+            const date = $(this).val();
+            if (date) {
+                loadGames(date);
+                $("#dr").html("");
+            }
         });
-    }
 
+        // PICK DATE CHANGE → AUTO LOAD HISTORY
+        $('#pick_date').on('change', function () {
+            const date = $(this).val();
+            if (date) {
+                loadHistory(date);
+            }
+        });
 
-
-
-
-
+        // BUTTON CLICK HISTORY
+        $('#getHistory').on('click', function () {
+            const date = $('#pick_date').val();
+            if (date) {
+                loadHistory(date);
+            }
+        });
+    });
 
     $("#submit").click(function () {
-
-        let date = $("#SubmitDate").val()
-        let game_id = $("#game_id_list").val()
-        let session = $("#session").val()
+        let date = $("#SubmitDate").val();
+        let game_id = $("#game_id_list").val();
+        let session = $("#session").val();
 
         if (!date || !game_id || !session) {
-
-            $("#error").show()
-
+            $("#error").show();
             setTimeout(() => {
-                $("#error").hide()
-            }, 3000)
-
-            return
+                $("#error").hide();
+            }, 3000);
+            return;
         }
 
         $.post("/admin/get_decleare_game",
@@ -331,44 +310,18 @@
                 game_id: game_id,
                 session: session
             },
-
             function (res) {
-
-                $("#dr").html(res)
-
-            })
-
-    })
-</script>
-
-
-
-<script>
-    loadGames();
-    $(document).ready(function () {
-
-        const now = new Date();
-        const day = ("0" + now.getDate()).slice(-2);
-        const month = ("0" + (now.getMonth() + 1)).slice(-2);
-        const today = now.getFullYear() + "-" + month + "-" + day;
-
-        $('#SubmitDate').val(today).attr("max", today);
-        $('#pick_date').val(today).attr("max", today);
-
-        loadGames();
-        loadHistory(today);
+                $("#dr").html(res);
+            }
+        );
     });
 
-
-
-
     $(document).on("click", "#save", function () {
-
-        let date = $("#SubmitDate").val()
-        let game_id = $("#game_id_list").val()
-        let session = $("#session").val()
-        let pana = $("#pana").val()
-        let digit = $("#digit").val()
+        let date = $("#SubmitDate").val();
+        let game_id = $("#game_id_list").val();
+        let session = $("#session").val();
+        let pana = $("#pana").val();
+        let digit = $("#digit").val();
 
         $.post("/admin/save_result",
             {
@@ -379,9 +332,7 @@
                 digit
             },
             function (res) {
-
                 if (res.res === "success") {
-
                     $.post("/admin/get_decleare_game",
                         {
                             date,
@@ -389,33 +340,29 @@
                             session
                         },
                         function (html) {
-
-                            $("#dr").html(html)
-                            const date = $('#pick_date').val();
-                            if (date) {
-                                loadHistory(date);
+                            $("#dr").html(html);
+                            const pickDate = $('#pick_date').val();
+                            if (pickDate) {
+                                loadHistory(pickDate);
                             }
-
-                        })
-
+                        }
+                    );
                 }
-
-            })
-
-    })
-
+            }
+        );
+    });
 
     function quick_view() {
-        let date = $("#SubmitDate").val()
-        let game_id = $("#game_id_list").val()
-        let session = $("#session").val()
-        let pana = $("#pana").val()
-        let digit = $("#digit").val()
+        let date = $("#SubmitDate").val();
+        let game_id = $("#game_id_list").val();
+        let session = $("#session").val();
+        let pana = $("#pana").val();
+        let digit = $("#digit").val();
 
-        $("#exampleModal").modal("show")
+        $("#exampleModal").modal("show");
         $("#exampleModal .modal-body").html(
             "<center><i class='fa fa-spinner fa-spin fa-3x'></i></center>"
-        )
+        );
         $.ajax({
             url: "/admin/show_winner",
             type: "POST",
@@ -427,159 +374,116 @@
                 digit: digit
             },
             success: function (res) {
-                $("#exampleModal .modal-body").html(res)
-            }
-        })
-    }
-    
-
-
-
-
-    $(document).on("click","#declare",function(){
-
-let date = $("#SubmitDate").val()
-let game_id = $("#game_id_list").val()
-let session = $("#session").val()
-let pana = $("#pana").val()
-let digit = $("#digit").val()
-
-if(!date || !game_id || !session || !pana || !digit){
-
-$("#error1").show()
-
-setTimeout(function(){
-$("#error1").hide()
-},3000)
-
-return
-}
-
-$.ajax({
-
-url:"/admin/declare_result",
-
-type:"POST",
-
-data:{
-date:date,
-game_id:game_id,
-session:session,
-pana:pana,
-digit:digit
-},
-
-beforeSend:function(){
-
-$("#declare").prop("disabled",true)
-$("#declare").text("Please Wait...")
-
-},
-
-success:function(res){
-
-const response = typeof res === "string" ? JSON.parse(res) : res
-
-const Toast = Swal.mixin({
-
-toast:true,
-position:"top-end",
-showConfirmButton:false,
-timer:1000
-
-})
-
-Toast.fire({
-icon:response.res,
-title:response.msg
-})
-
-if(response.res==="success"){
-
-setTimeout(function(){
-location.reload()
-},500)
-
-}
-
-}
-
-})
-
-})
-
-
-
-
-
-
-
-</script>
-
-
-<script>
-document.addEventListener("click", function(e) {
-
-    if (e.target.classList.contains("deleteBtn")) {
-
-        const id = e.target.getAttribute("data-id");
-        const action = e.target.getAttribute("data-action");
-
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "Ye record delete ho jayega!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-
-            if (result.isConfirmed) {
-
-                // 🔹 Loading alert
-                Swal.fire({
-                    title: 'Please wait...',
-                    text: 'Deleting...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // 🔹 API call
-                fetch(`/admin/delete-result/${id}/${action}`, {
-                    method: 'DELETE'
-                })
-                .then(res => res.json())
-                .then(res => {
-
-                    if (res.status) {
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: 'Record deleted successfully'
-                        });
-
-                        // 🔥 Row remove without reload
-                        // e.target.closest("tr").remove();
-                        const date = $('#pick_date').val();
-                        if (date) {
-                            loadHistory(date);
-                        }
-
-                    } else {
-                        Swal.fire('Error', res.message || 'Delete failed', 'error');
-                    }
-
-                })
-                .catch(err => {
-                    Swal.fire('Error', 'Something went wrong', 'error');
-                });
-
+                $("#exampleModal .modal-body").html(res);
             }
         });
     }
-});
+
+    $(document).on("click", "#declare", function () {
+        let date = $("#SubmitDate").val();
+        let game_id = $("#game_id_list").val();
+        let session = $("#session").val();
+        let pana = $("#pana").val();
+        let digit = $("#digit").val();
+
+        if (!date || !game_id || !session || !pana || !digit) {
+            $("#error1").show();
+            setTimeout(function () {
+                $("#error1").hide();
+            }, 3000);
+            return;
+        }
+
+        $.ajax({
+            url: "/admin/declare_result",
+            type: "POST",
+            data: {
+                date: date,
+                game_id: game_id,
+                session: session,
+                pana: pana,
+                digit: digit
+            },
+            beforeSend: function () {
+                $("#declare").prop("disabled", true);
+                $("#declare").text("Please Wait...");
+            },
+            success: function (res) {
+                const response = typeof res === "string" ? JSON.parse(res) : res;
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 1000
+                });
+
+                Toast.fire({
+                    icon: response.res,
+                    title: response.msg
+                });
+
+                if (response.res === "success") {
+                    setTimeout(function () {
+                        location.reload();
+                    }, 500);
+                } else {
+                    $("#declare").prop("disabled", false);
+                    $("#declare").text("Declare");
+                }
+            }
+        });
+    });
+
+    document.addEventListener("click", function (e) {
+        if (e.target.classList.contains("deleteBtn")) {
+            const id = e.target.getAttribute("data-id");
+            const action = e.target.getAttribute("data-action");
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Ye record delete ho jayega!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Please wait...',
+                        text: 'Deleting...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(`/admin/delete-result/${id}/${action}`, {
+                        method: 'DELETE'
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.status) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: 'Record deleted successfully'
+                            });
+
+                            const pickDate = $('#pick_date').val();
+                            if (pickDate) {
+                                loadHistory(pickDate);
+                            }
+                            loadGames($('#SubmitDate').val());
+                        } else {
+                            Swal.fire('Error', res.message || 'Delete failed', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('Error', 'Something went wrong', 'error');
+                    });
+                }
+            });
+        }
+    });
 </script>

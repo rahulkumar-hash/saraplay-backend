@@ -1082,18 +1082,66 @@ $('#starlineDeclareFilterForm').on('submit', function (e) {
 
 
 /* =========================
-   LOAD GAMES (Starline Only)
+   LOAD GAMES (Starline & Jackpot)
 ========================= */
+function loadStarlineGames(date) {
+  const targetDate = date || $('#SubmitDate').val() || new Date().toISOString().slice(0, 10);
+  $.get('/admin/starline-declare-result/games', { date: targetDate }, res => {
+    let html = '<option value="">Select Game</option>';
+    if (res && res.status && Array.isArray(res.data) && res.data.length) {
+      res.data.forEach(g => {
+        html += `<option value="${g.id}">${g.name} ${g.open_time ? '(' + g.open_time + ')' : ''}</option>`;
+      });
+    } else {
+      html += '<option value="" disabled>No games available to declare</option>';
+    }
+    $('#game_id').html(html);
+  });
+}
+
+function loadJackpotGames(date) {
+  const targetDate = date || $('#SubmitDate').val() || new Date().toISOString().slice(0, 10);
+  $.get('/admin/get-jackpot-games-for-declare', { date: targetDate }, res => {
+    let html = '<option value="">Select Game</option>';
+    if (res && res.status && Array.isArray(res.data) && res.data.length) {
+      res.data.forEach(g => {
+        html += `<option value="${g.id}">${g.name} ${g.close_time ? '(' + g.close_time + ')' : ''}</option>`;
+      });
+    } else {
+      html += '<option value="" disabled>No games available to declare</option>';
+    }
+    $('#game_id').html(html);
+  });
+}
+
 const todayStr = new Date().toISOString().slice(0, 10);
 $('#SubmitDate').attr("max", todayStr);
 
 if ($('#starlineDeclareFilterForm').length) {
-  $.get('/admin/manage-starline-games/data', res => {
-    let html = '<option value="">Select Game (All)</option>';
-    res.data.forEach(g => {
-        html += `<option value="${g.id}">${g.name}</option>`;
-    });
-    $('#game_id').html(html);
+  if (!$('#SubmitDate').val()) {
+    $('#SubmitDate').val(todayStr);
+  }
+  loadStarlineGames($('#SubmitDate').val());
+  $('#SubmitDate').on('change', function () {
+    const d = $(this).val();
+    if (d) {
+      loadStarlineGames(d);
+      $('#dr').html('');
+    }
+  });
+}
+
+if ($('#jackpotDeclareFilterForm').length) {
+  if (!$('#SubmitDate').val()) {
+    $('#SubmitDate').val(todayStr);
+  }
+  loadJackpotGames($('#SubmitDate').val());
+  $('#SubmitDate').on('change', function () {
+    const d = $(this).val();
+    if (d) {
+      loadJackpotGames(d);
+      $('#jackpotFormContainer').html('');
+    }
   });
 }
 

@@ -26,6 +26,46 @@ exports.index = async (req, res) => {
 
 
 /* =========================
+   GET GAMES FOR DECLARE (Filter out declared games)
+========================= */
+exports.getGamesForDeclare = async (req, res) => {
+  try {
+    const rawDate = req.query.date || req.body.date || new Date();
+    const dateMoment = moment(rawDate, ["YYYY-MM-DD", "DD MMM YYYY", "YYYY/MM/DD", moment.ISO_8601]);
+    const dateISO = dateMoment.isValid() ? dateMoment.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD");
+    const dateFmt = dateMoment.isValid() ? dateMoment.format("DD MMM YYYY") : moment().format("DD MMM YYYY");
+
+    const result = await dbQuery(`
+      SELECT DISTINCT ON (g.id) g.id, g.name, g.open_time, g.status
+      FROM starline_game g
+      LEFT JOIN starline_declear_result r
+        ON g.id = r.game_id::integer
+       AND (
+         r.result_date = $1
+         OR r.result_date = $2
+         OR (
+           r.result_date ~ '^[0-9]{1,2} [A-Za-z]{3} [0-9]{4}$'
+           AND to_date(r.result_date, 'DD Mon YYYY') = $1::date
+         )
+       )
+      WHERE g.status = 'true'
+        AND (
+          r.id IS NULL
+          OR r.declare_date IS NULL
+          OR r.declare_date = ''
+        )
+      ORDER BY g.id ASC
+    `, [dateISO, dateFmt]);
+
+    res.json({ status: true, data: result.rows });
+  } catch (err) {
+    console.error("Starline getGamesForDeclare error:", err);
+    res.json({ status: false, data: [] });
+  }
+};
+
+
+/* =========================
    DATATABLE DATA
 ========================= */
 exports.data = async (req, res) => {

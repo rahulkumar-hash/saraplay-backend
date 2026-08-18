@@ -686,6 +686,9 @@ function JackpotResultStatusDelete(id, col, table, action) {
         if (res.status === true) {
           Swal.fire('Deleted!', res.msg, 'success');
           reloadTable("jackpotDataTable");
+          if (typeof loadJackpotGames === 'function') {
+            loadJackpotGames($('#SubmitDate').val());
+          }
         } else {
           Swal.fire('Error', res.msg || 'Delete failed', 'error');
         }
@@ -810,6 +813,9 @@ function declareStarlineResult() {
           if ($.fn.DataTable.isDataTable('#starlineDeclareTable')) {
             $('#starlineDeclareTable').DataTable().ajax.reload(null, false);
           }
+          if (typeof loadStarlineGames === 'function') {
+            loadStarlineGames($('#SubmitDate').val());
+          }
           loadDeclareForm();
         } else {
           Swal.fire({ icon: 'error', title: res.msg });
@@ -922,6 +928,9 @@ function declareJackpotResult() {
           if ($.fn.DataTable.isDataTable('#jackpotDataTable')) {
             $('#jackpotDataTable').DataTable().ajax.reload(null, false);
           }
+          if (typeof loadJackpotGames === 'function') {
+            loadJackpotGames($('#SubmitDate').val());
+          }
           loadJackpotDeclareForm();
         } else {
           Swal.fire({ icon: 'error', title: res.msg });
@@ -955,6 +964,9 @@ function deleteResult(id) {
           Swal.fire(res.msg);
           if (res.res === 'success') {
             starlineDeclareTable.ajax.reload(null, false);
+            if (typeof loadStarlineGames === 'function') {
+              loadStarlineGames($('#SubmitDate').val());
+            }
           }
         }
       });

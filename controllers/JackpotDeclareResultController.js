@@ -12,14 +12,33 @@ const {
 ========================= */
 exports.index = async (req, res) => {
   try {
-    // ✅ Only jackpot games — NOT starline
-    const games = await dbQuery(`
-      SELECT id, name
-      FROM jackpot
-      ORDER BY id ASC
-    `);
+    const today = new Date().toISOString().slice(0, 10);
+    const dateMoment = moment(today);
+    const dateISO = dateMoment.format("YYYY-MM-DD");
+    const dateFmt = dateMoment.format("DD MMM YYYY");
 
-    console.log("🎰 Jackpot Games in DB:", JSON.stringify(games.rows));
+    // Filter jackpot games not declared today
+    const games = await dbQuery(`
+      SELECT DISTINCT ON (g.id) g.id, g.name, g.close_time
+      FROM jackpot g
+      LEFT JOIN jackpot_declear_result r
+        ON g.id = r.game_id::integer
+       AND (
+         r.result_date = $1
+         OR r.result_date = $2
+         OR (
+           r.result_date ~ '^[0-9]{1,2} [A-Za-z]{3} [0-9]{4}$'
+           AND to_date(r.result_date, 'DD Mon YYYY') = $1::date
+         )
+       )
+      WHERE g.status = 'true'
+        AND (
+          r.id IS NULL
+          OR r.declare_date IS NULL
+          OR r.declare_date = ''
+        )
+      ORDER BY g.id ASC
+    `, [dateISO, dateFmt]);
 
     res.render("jackpotDeclareResult/index", {
       title: "Jackpot Declare Result",
@@ -32,6 +51,46 @@ exports.index = async (req, res) => {
   } catch (err) {
     console.error("JackpotDeclareResult index error:", err);
     res.status(500).send("Server Error");
+  }
+};
+
+
+/* =========================
+   GET GAMES FOR DECLARE (Filter out declared games)
+========================= */
+exports.getGamesForDeclare = async (req, res) => {
+  try {
+    const rawDate = req.query.date || req.body.date || new Date();
+    const dateMoment = moment(rawDate, ["YYYY-MM-DD", "DD MMM YYYY", "YYYY/MM/DD", moment.ISO_8601]);
+    const dateISO = dateMoment.isValid() ? dateMoment.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD");
+    const dateFmt = dateMoment.isValid() ? dateMoment.format("DD MMM YYYY") : moment().format("DD MMM YYYY");
+
+    const result = await dbQuery(`
+      SELECT DISTINCT ON (g.id) g.id, g.name, g.close_time, g.status
+      FROM jackpot g
+      LEFT JOIN jackpot_declear_result r
+        ON g.id = r.game_id::integer
+       AND (
+         r.result_date = $1
+         OR r.result_date = $2
+         OR (
+           r.result_date ~ '^[0-9]{1,2} [A-Za-z]{3} [0-9]{4}$'
+           AND to_date(r.result_date, 'DD Mon YYYY') = $1::date
+         )
+       )
+      WHERE g.status = 'true'
+        AND (
+          r.id IS NULL
+          OR r.declare_date IS NULL
+          OR r.declare_date = ''
+        )
+      ORDER BY g.id ASC
+    `, [dateISO, dateFmt]);
+
+    res.json({ status: true, data: result.rows });
+  } catch (err) {
+    console.error("Jackpot getGamesForDeclare error:", err);
+    res.json({ status: false, data: [] });
   }
 };
 

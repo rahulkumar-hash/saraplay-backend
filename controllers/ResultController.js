@@ -73,20 +73,38 @@ exports.getResultHistory = async (req, res) => {
 
 exports.getGamesForDeclare = async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const rawDate = req.query.date || req.body.date || new Date();
+    const dateMoment = moment(rawDate, ["YYYY-MM-DD", "DD MMM YYYY", "YYYY/MM/DD", moment.ISO_8601]);
+    const dateISO = dateMoment.isValid() ? dateMoment.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD");
+    const dateFmt = dateMoment.isValid() ? dateMoment.format("DD MMM YYYY") : moment().format("DD MMM YYYY");
 
     const result = await dbQuery(`
-      SELECT g.*
+      SELECT DISTINCT ON (g.id) g.*
       FROM game g
       LEFT JOIN declear_result d
         ON g.id = d.game_id::integer
-       AND to_date(d.result_date, 'DD Mon YYYY') = $1::date
+       AND (
+         d.result_date = $2
+         OR (
+           d.result_date ~ '^[0-9]{1,2} [A-Za-z]{3} [0-9]{4}$'
+           AND to_date(d.result_date, 'DD Mon YYYY') = $1::date
+         )
+       )
       WHERE g.status = 'true'
-    `, [today]);
+        AND (
+          d.id IS NULL
+          OR NOT (
+            (COALESCE(d.open_result, '') = 'Declared' OR (d.open_declare_date IS NOT NULL AND d.open_declare_date != ''))
+            AND
+            (COALESCE(d.close_result, '') = 'Declared' OR (d.close_declare_date IS NOT NULL AND d.close_declare_date != ''))
+          )
+        )
+      ORDER BY g.id ASC
+    `, [dateISO, dateFmt]);
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("getGamesForDeclare error:", err);
     res.json([]);
   }
 };

@@ -453,6 +453,8 @@ router.post("/starline-bid-history/games", csrfProtection, authMiddleware, Starl
    STARLINE DECLARE RESULT
 ========================= */
 router.get("/starline-declare-result", csrfProtection, authMiddleware, StarlineDeclareResultController.index);
+router.get("/starline-declare-result/games", authMiddleware, StarlineDeclareResultController.getGamesForDeclare);
+router.post("/starline-declare-result/games", authMiddleware, StarlineDeclareResultController.getGamesForDeclare);
 router.post("/starline-declare-result/data", csrfProtection, authMiddleware, StarlineDeclareResultController.data);
 router.post("/starline-declare-result/get-game", csrfProtection, authMiddleware, StarlineDeclareResultController.getDeclareGame);
 router.post("/starline-declare-result/show-winner", csrfProtection, authMiddleware, StarlineDeclareResultController.showWinner);
@@ -516,6 +518,8 @@ router.post("/jackpot-bid-history/data", csrfProtection, authMiddleware, Jackpot
 ========================= */
 
 router.get("/jackpot-declare-result", csrfProtection, authMiddleware, JackpotDeclareResultController.index);
+router.get("/get-jackpot-games-for-declare", authMiddleware, JackpotDeclareResultController.getGamesForDeclare);
+router.post("/get-jackpot-games-for-declare", authMiddleware, JackpotDeclareResultController.getGamesForDeclare);
 router.post("/get-jackpot-declare-game", csrfProtection, authMiddleware, JackpotDeclareResultController.getDeclareGame);
 router.post("/get-jackpot-declare-results", csrfProtection, authMiddleware, JackpotDeclareResultController.getDeclareResults);
 router.post("/jackpot-save-result", csrfProtection, authMiddleware, JackpotDeclareResultController.saveResult);
