@@ -987,10 +987,6 @@ exports.jackpotResultChart = async (req, res) => {
       return res.status(401).json({ status: false, message: "Unauthorized" });
     }
 
-    // ── Params ────────────────────────────────────────────────────────────────
-    // days  → how many past days to show (default 30)
-    // from  → custom start date YYYY-MM-DD (optional)
-    // to    → custom end date   YYYY-MM-DD (optional, default today)
     const days = parseInt(req.query.days || req.body?.days) || 30;
     const fromParam = req.query.from || req.body?.from || null;
     const toParam   = req.query.to   || req.body?.to   || null;
@@ -1007,14 +1003,42 @@ exports.jackpotResultChart = async (req, res) => {
           return d.toISOString().slice(0, 10);
         })();
 
-    // ── 1. All active jackpot games sorted by close_time ─────────────────────
+    // ── 1. All active jackpot games ──────────────────────────────────────────
     const gamesRes = await dbQuery(
       `SELECT id, name, close_time
        FROM jackpot
        WHERE status = true
-       ORDER BY close_time ASC`
+       ORDER BY id ASC`
     );
-    const games = gamesRes.rows; // [{id, name, close_time}, ...]
+    let games = gamesRes.rows;
+
+    function timeToMinutes(timeStr) {
+      if (!timeStr) return 0;
+      const str = String(timeStr).trim().toUpperCase();
+      const isPM = str.includes("PM");
+      const isAM = str.includes("AM");
+      const clean = str.replace(/[APM\s]/g, "");
+      const [h, m] = clean.split(":").map(Number);
+      let hours = isNaN(h) ? 0 : h;
+      const minutes = isNaN(m) ? 0 : m;
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+
+    function formatTime12(timeStr) {
+      if (!timeStr) return "";
+      const str = String(timeStr).trim().toUpperCase();
+      if (str.includes("AM") || str.includes("PM")) return str;
+      const [h, m] = str.split(":").map(Number);
+      if (isNaN(h)) return timeStr;
+      const period = h >= 12 ? "PM" : "AM";
+      const hours = h % 12 === 0 ? 12 : h % 12;
+      const mins = String(isNaN(m) ? 0 : m).padStart(2, "0");
+      return `${hours}:${mins} ${period}`;
+    }
+
+    games.sort((a, b) => timeToMinutes(a.close_time) - timeToMinutes(b.close_time));
 
     if (games.length === 0) {
       return res.json({
@@ -1030,20 +1054,24 @@ exports.jackpotResultChart = async (req, res) => {
     const resultsRes = await dbQuery(
       `SELECT game_id, result_date, result, declare_date
        FROM jackpot_declear_result
-       WHERE result_date::date BETWEEN $1 AND $2
-       ORDER BY result_date DESC`,
-      [startDate, endDate]
+       ORDER BY id DESC`
     );
 
-    // Build lookup map: { "YYYY-MM-DD_gameId": result }
+    const moment = require("moment");
     const resultMap = {};
     resultsRes.rows.forEach((row) => {
-      // result_date may be stored as "YYYY-MM-DD" or timestamp — normalise to YYYY-MM-DD
-      const dateKey = String(row.result_date).slice(0, 10);
-      const key     = `${dateKey}_${row.game_id}`;
-      // Only count as declared if declare_date is filled
-      if (row.declare_date && row.declare_date !== "") {
-        resultMap[key] = row.result || "**";
+      let dateKey = "";
+      if (row.result_date) {
+        const m = moment(row.result_date, ["YYYY-MM-DD", "DD MMM YYYY", "DD-MM-YYYY", moment.ISO_8601]);
+        if (m.isValid()) {
+          dateKey = m.format("YYYY-MM-DD");
+        } else {
+          dateKey = String(row.result_date).slice(0, 10);
+        }
+      }
+      const key = `${dateKey}_${row.game_id}`;
+      if (row.declare_date && String(row.declare_date).trim() !== "") {
+        resultMap[key] = String(row.result || "").trim() || "**";
       }
     });
 
@@ -1057,16 +1085,14 @@ exports.jackpotResultChart = async (req, res) => {
     }
 
     // ── 4. Build chart rows ───────────────────────────────────────────────────
-    // Each row: { date: "13-08-2026", results: { gameId: "07", ... } }
     const chart = dateList.map((dateStr) => {
-      // Display format: "DD-MM-YYYY"
       const [y, m, d] = dateStr.split("-");
       const displayDate = `${d}-${m}-${y}`;
 
       const results = {};
       games.forEach((game) => {
         const key = `${dateStr}_${game.id}`;
-        results[game.id] = resultMap[key] || "";   // "" = not declared
+        results[game.id] = resultMap[key] || "";
       });
 
       return {
@@ -1080,7 +1106,7 @@ exports.jackpotResultChart = async (req, res) => {
     const gameHeaders = games.map((g) => ({
       id:         g.id,
       name:       g.name,
-      close_time: g.close_time,   // "22:30" or "10:30" — frontend shows as column header
+      close_time: formatTime12(g.close_time),
     }));
 
     return res.json({
@@ -1088,8 +1114,8 @@ exports.jackpotResultChart = async (req, res) => {
       message: "Jackpot Result Chart Loaded",
       from:    startDate,
       to:      endDate,
-      games:   gameHeaders,   // column headers
-      chart,                  // rows
+      games:   gameHeaders,
+      chart,
     });
 
   } catch (error) {

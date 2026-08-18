@@ -770,3 +770,153 @@ exports.declareStarlineResult = async (req, res) => {
     client.release();
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/starline/result-chart
+// Chart: rows = dates (last N days), columns = starline games (sorted by open_time)
+// Cell value = declared result ("123-6") or null if not declared yet
+// ─────────────────────────────────────────────────────────────────────────────
+exports.starlineResultChart = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ status: false, message: "Unauthorized" });
+    }
+
+    const days = parseInt(req.query.days || req.body?.days) || 30;
+    const fromParam = req.query.from || req.body?.from || null;
+    const toParam   = req.query.to   || req.body?.to   || null;
+
+    const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+    const endDate   = toParam   || todayIST;
+    const startDate = fromParam
+      ? fromParam
+      : (() => {
+          const d = new Date(endDate);
+          d.setDate(d.getDate() - (days - 1));
+          return d.toISOString().slice(0, 10);
+        })();
+
+    const gamesRes = await dbQuery(
+      `SELECT id, name, open_time
+       FROM starline_game
+       ORDER BY id ASC`
+    );
+    let games = gamesRes.rows;
+
+    function timeToMinutes(timeStr) {
+      if (!timeStr) return 0;
+      const str = String(timeStr).trim().toUpperCase();
+      const isPM = str.includes("PM");
+      const isAM = str.includes("AM");
+      const clean = str.replace(/[APM\s]/g, "");
+      const [h, m] = clean.split(":").map(Number);
+      let hours = isNaN(h) ? 0 : h;
+      const minutes = isNaN(m) ? 0 : m;
+      if (isPM && hours < 12) hours += 12;
+      if (isAM && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+
+    function formatTime12(timeStr) {
+      if (!timeStr) return "";
+      const str = String(timeStr).trim().toUpperCase();
+      if (str.includes("AM") || str.includes("PM")) return str;
+      const [h, m] = str.split(":").map(Number);
+      if (isNaN(h)) return timeStr;
+      const period = h >= 12 ? "PM" : "AM";
+      const hours = h % 12 === 0 ? 12 : h % 12;
+      const mins = String(isNaN(m) ? 0 : m).padStart(2, "0");
+      return `${hours}:${mins} ${period}`;
+    }
+
+    games.sort((a, b) => timeToMinutes(a.open_time) - timeToMinutes(b.open_time));
+
+    if (games.length === 0) {
+      return res.json({
+        status:  false,
+        message: "No starline games found",
+        games:   [],
+        dates:   [],
+        chart:   [],
+      });
+    }
+
+    const resultsRes = await dbQuery(
+      `SELECT game_id, result_date, pana, digit, declare_date
+       FROM starline_declear_result
+       ORDER BY id DESC`
+    );
+
+    const moment = require("moment");
+    const resultMap = {};
+    resultsRes.rows.forEach((row) => {
+      let dateKey = "";
+      if (row.result_date) {
+        const m = moment(row.result_date, ["YYYY-MM-DD", "DD MMM YYYY", "DD-MM-YYYY", moment.ISO_8601]);
+        if (m.isValid()) {
+          dateKey = m.format("YYYY-MM-DD");
+        } else {
+          dateKey = String(row.result_date).slice(0, 10);
+        }
+      }
+      const key = `${dateKey}_${row.game_id}`;
+      if (row.declare_date && String(row.declare_date).trim() !== "") {
+        const p = String(row.pana || "").trim();
+        const d = String(row.digit || "").trim();
+        if (p || d) {
+          resultMap[key] = { pana: p, digit: d, full: `${p || '***'}-${d || '*'}` };
+        }
+      }
+    });
+
+    const dateList = [];
+    const cursor   = new Date(endDate);
+    const stop     = new Date(startDate);
+    while (cursor >= stop) {
+      dateList.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    const chart = dateList.map((dateStr) => {
+      const [y, m, d] = dateStr.split("-");
+      const displayDate = `${d}-${m}-${y}`;
+
+      const results = {};
+      games.forEach((game) => {
+        const key = `${dateStr}_${game.id}`;
+        results[game.id] = resultMap[key] || null;
+      });
+
+      return {
+        date:         displayDate,
+        date_iso:     dateStr,
+        results,
+      };
+    });
+
+    const gameHeaders = games.map((g) => ({
+      id:         g.id,
+      name:       g.name,
+      open_time:  formatTime12(g.open_time),
+    }));
+
+    return res.json({
+      status:  true,
+      message: "Starline Result Chart Loaded",
+      from:    startDate,
+      to:      endDate,
+      games:   gameHeaders,
+      chart,
+    });
+
+  } catch (error) {
+    console.error("Starline Result Chart Error:", error);
+    return res.status(500).json({
+      status:  false,
+      message: "Server Error",
+      error:   error.message,
+    });
+  }
+};
+

@@ -972,3 +972,257 @@ exports.gameChartList = async (req, res) => {
     });
   }
 };
+
+const RED_JODIS = new Set([
+  "00","11","22","33","44","55","66","77","88","99",
+  "05","50","16","61","27","72","38","83","49","94"
+]);
+
+function isRedJodi(openDigit, closeDigit) {
+  if (openDigit === undefined || closeDigit === undefined || openDigit === "" || closeDigit === "" || openDigit === "*" || closeDigit === "*") return false;
+  const str = `${openDigit}${closeDigit}`;
+  return RED_JODIS.has(str);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/game/jodi-chart
+// ─────────────────────────────────────────────────────────────────────────────
+exports.getGameJodiChart = async (req, res) => {
+  try {
+    const game_id = req.query.game_id || req.body?.game_id || null;
+    const moment = require("moment");
+
+    const gamesRes = await dbQuery(
+      `SELECT id, name, hname, open_time, close_time FROM game WHERE status=true ORDER BY name ASC`
+    );
+    const games = gamesRes.rows;
+
+    if (games.length === 0) {
+      return res.json({
+        status: false,
+        message: "No active games found",
+        games: [],
+        weeks: []
+      });
+    }
+
+    const selectedGameId = game_id ? String(game_id) : String(games[0].id);
+    const selectedGame = games.find(g => String(g.id) === selectedGameId) || games[0];
+
+    const resultsRes = await dbQuery(
+      `SELECT id, game_id, result_date, open_digit, close_digit, open_result, close_result
+       FROM declear_result
+       WHERE game_id=$1
+       ORDER BY id DESC`,
+      [selectedGame.id]
+    );
+
+    const resultMap = {};
+    resultsRes.rows.forEach((r) => {
+      let dateKey = "";
+      if (r.result_date) {
+        const m = moment(r.result_date, ["YYYY-MM-DD", "DD MMM YYYY", "DD-MM-YYYY", moment.ISO_8601]);
+        if (m.isValid()) {
+          dateKey = m.format("YYYY-MM-DD");
+        } else {
+          dateKey = String(r.result_date).slice(0, 10);
+        }
+      }
+      if (dateKey) {
+        const od = (r.open_digit !== null && r.open_digit !== undefined && String(r.open_digit).trim() !== "") ? String(r.open_digit).trim() : "*";
+        const cd = (r.close_digit !== null && r.close_digit !== undefined && String(r.close_digit).trim() !== "") ? String(r.close_digit).trim() : "*";
+        const hasOpen = od !== "*";
+        const hasClose = cd !== "*";
+        resultMap[dateKey] = {
+          open_digit: od,
+          close_digit: cd,
+          jodi: `${od}${cd}`,
+          is_declared: hasOpen || hasClose,
+          is_full_declared: hasOpen && hasClose,
+          is_red: hasOpen && hasClose ? isRedJodi(od, cd) : false
+        };
+      }
+    });
+
+    const weeks = [];
+    const today = moment();
+    const currentWeekMon = moment(today).startOf('isoWeek');
+
+    for (let w = 0; w < 26; w++) {
+      const weekMon = moment(currentWeekMon).subtract(w, 'weeks');
+      const weekSun = moment(weekMon).add(6, 'days');
+      const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const days = [];
+
+      for (let d = 0; d < 7; d++) {
+        const dayMoment = moment(weekMon).add(d, 'days');
+        const dayISO = dayMoment.format("YYYY-MM-DD");
+        const dayDisplay = dayMoment.format("DD-MM-YYYY");
+        const resObj = resultMap[dayISO] || {
+          open_digit: "*",
+          close_digit: "*",
+          jodi: "**",
+          is_declared: false,
+          is_full_declared: false,
+          is_red: false
+        };
+
+        days.push({
+          day_name: dayNames[d],
+          date: dayDisplay,
+          date_iso: dayISO,
+          ...resObj
+        });
+      }
+
+      weeks.push({
+        week_range: `${weekMon.format("DD/MM/YYYY")} - ${weekSun.format("DD/MM/YYYY")}`,
+        week_start: weekMon.format("DD-MM-YYYY"),
+        week_end: weekSun.format("DD-MM-YYYY"),
+        days
+      });
+    }
+
+    return res.json({
+      status: true,
+      message: "Jodi Chart Loaded",
+      game: selectedGame,
+      games,
+      weeks
+    });
+
+  } catch (error) {
+    console.error("Game Jodi Chart Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/game/panel-chart
+// ─────────────────────────────────────────────────────────────────────────────
+exports.getGamePanelChart = async (req, res) => {
+  try {
+    const game_id = req.query.game_id || req.body?.game_id || null;
+    const moment = require("moment");
+
+    const gamesRes = await dbQuery(
+      `SELECT id, name, hname, open_time, close_time FROM game WHERE status=true ORDER BY name ASC`
+    );
+    const games = gamesRes.rows;
+
+    if (games.length === 0) {
+      return res.json({
+        status: false,
+        message: "No active games found",
+        games: [],
+        weeks: []
+      });
+    }
+
+    const selectedGameId = game_id ? String(game_id) : String(games[0].id);
+    const selectedGame = games.find(g => String(g.id) === selectedGameId) || games[0];
+
+    const resultsRes = await dbQuery(
+      `SELECT id, game_id, result_date, open_pana, open_digit, close_digit, close_pana, open_result, close_result
+       FROM declear_result
+       WHERE game_id=$1
+       ORDER BY id DESC`,
+      [selectedGame.id]
+    );
+
+    const resultMap = {};
+    resultsRes.rows.forEach((r) => {
+      let dateKey = "";
+      if (r.result_date) {
+        const m = moment(r.result_date, ["YYYY-MM-DD", "DD MMM YYYY", "DD-MM-YYYY", moment.ISO_8601]);
+        if (m.isValid()) {
+          dateKey = m.format("YYYY-MM-DD");
+        } else {
+          dateKey = String(r.result_date).slice(0, 10);
+        }
+      }
+      if (dateKey) {
+        const op = (r.open_pana !== null && r.open_pana !== undefined && String(r.open_pana).trim() !== "") ? String(r.open_pana).trim() : "***";
+        const od = (r.open_digit !== null && r.open_digit !== undefined && String(r.open_digit).trim() !== "") ? String(r.open_digit).trim() : "*";
+        const cd = (r.close_digit !== null && r.close_digit !== undefined && String(r.close_digit).trim() !== "") ? String(r.close_digit).trim() : "*";
+        const cp = (r.close_pana !== null && r.close_pana !== undefined && String(r.close_pana).trim() !== "") ? String(r.close_pana).trim() : "***";
+        const hasOpen = od !== "*";
+        const hasClose = cd !== "*";
+        resultMap[dateKey] = {
+          open_pana: op,
+          open_digit: od,
+          close_digit: cd,
+          close_pana: cp,
+          jodi: `${od}${cd}`,
+          full: `${op}-${od}${cd}-${cp}`,
+          is_declared: hasOpen || hasClose,
+          is_full_declared: hasOpen && hasClose,
+          is_red: hasOpen && hasClose ? isRedJodi(od, cd) : false
+        };
+      }
+    });
+
+    const weeks = [];
+    const today = moment();
+    const currentWeekMon = moment(today).startOf('isoWeek');
+
+    for (let w = 0; w < 26; w++) {
+      const weekMon = moment(currentWeekMon).subtract(w, 'weeks');
+      const weekSun = moment(weekMon).add(6, 'days');
+      const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const days = [];
+
+      for (let d = 0; d < 7; d++) {
+        const dayMoment = moment(weekMon).add(d, 'days');
+        const dayISO = dayMoment.format("YYYY-MM-DD");
+        const dayDisplay = dayMoment.format("DD-MM-YYYY");
+        const resObj = resultMap[dayISO] || {
+          open_pana: "***",
+          open_digit: "*",
+          close_digit: "*",
+          close_pana: "***",
+          jodi: "**",
+          full: "***-**-***",
+          is_declared: false,
+          is_full_declared: false,
+          is_red: false
+        };
+
+        days.push({
+          day_name: dayNames[d],
+          date: dayDisplay,
+          date_iso: dayISO,
+          ...resObj
+        });
+      }
+
+      weeks.push({
+        week_range: `${weekMon.format("DD/MM/YYYY")} - ${weekSun.format("DD/MM/YYYY")}`,
+        week_start: weekMon.format("DD-MM-YYYY"),
+        week_end: weekSun.format("DD-MM-YYYY"),
+        days
+      });
+    }
+
+    return res.json({
+      status: true,
+      message: "Panel Chart Loaded",
+      game: selectedGame,
+      games,
+      weeks
+    });
+
+  } catch (error) {
+    console.error("Game Panel Chart Error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
+};
+

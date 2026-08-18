@@ -140,6 +140,7 @@ router.get("/starline/rates", jwtAuth, StarlineController.starlineGameRates);
 router.post("/starline/history", jwtAuth, StarlineController.starlineBidHistory);
 router.post("/starline/game-status", jwtAuth, StarlineController.starlineGameStatus);
 router.post("/starline/game-chart", jwtAuth, StarlineController.starlineGameChart);
+router.get("/starline/result-chart", jwtAuth, StarlineController.starlineResultChart);
 
 
 
@@ -218,9 +219,11 @@ router.post("/new-win-history", jwtAuth, GameController.newWinHistory);
 // router.get("/games/advanced", jwtAuth, GameController.getGamesAdvanced);
 
 
-// router.post("/game/chart", jwtAuth, GameController.getGameChart);
 router.get("/game/chart-list", jwtAuth, GameController.gameChartList);
-// router.get("/win/latest", jwtAuth, GameController.getNewWinHistory);
+router.get("/game/jodi-chart", jwtAuth, GameController.getGameJodiChart);
+router.post("/game/jodi-chart", jwtAuth, GameController.getGameJodiChart);
+router.get("/game/panel-chart", jwtAuth, GameController.getGamePanelChart);
+router.post("/game/panel-chart", jwtAuth, GameController.getGamePanelChart);
 
 
 
