@@ -1044,11 +1044,12 @@ exports.getGameJodiChart = async (req, res) => {
       }
     });
 
+    const weeksCount = parseInt(req.query.weeks || req.body?.weeks) || 52;
     const weeks = [];
     const today = moment();
     const currentWeekMon = moment(today).startOf('isoWeek');
 
-    for (let w = 0; w < 26; w++) {
+    for (let w = 0; w < weeksCount; w++) {
       const weekMon = moment(currentWeekMon).subtract(w, 'weeks');
       const weekSun = moment(weekMon).add(6, 'days');
       const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -1166,11 +1167,12 @@ exports.getGamePanelChart = async (req, res) => {
       }
     });
 
+    const weeksCount = parseInt(req.query.weeks || req.body?.weeks) || 52;
     const weeks = [];
     const today = moment();
     const currentWeekMon = moment(today).startOf('isoWeek');
 
-    for (let w = 0; w < 26; w++) {
+    for (let w = 0; w < weeksCount; w++) {
       const weekMon = moment(currentWeekMon).subtract(w, 'weeks');
       const weekSun = moment(weekMon).add(6, 'days');
       const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

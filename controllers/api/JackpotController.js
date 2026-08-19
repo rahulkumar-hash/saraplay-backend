@@ -987,7 +987,7 @@ exports.jackpotResultChart = async (req, res) => {
       return res.status(401).json({ status: false, message: "Unauthorized" });
     }
 
-    const days = parseInt(req.query.days || req.body?.days) || 30;
+    const days = parseInt(req.query.days || req.body?.days) || 365;
     const fromParam = req.query.from || req.body?.from || null;
     const toParam   = req.query.to   || req.body?.to   || null;
 
