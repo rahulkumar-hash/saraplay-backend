@@ -308,28 +308,11 @@ exports.winHistory = async (req, res) => {
 
 exports.JackpotGameChart = async (req, res) => {
   try {
-    const { user_id, date } = req.body;
+    const { date } = req.body || {};
 
     const game_date = date
       ? new Date(date).toISOString().slice(0, 10)
       : new Date().toISOString().slice(0, 10);
-
-    if (!user_id) {
-      return res.json({
-        status: false,
-        message: "Missing Parameters",
-      });
-    }
-
-    // check user
-    const user = await dbQuery(`SELECT * FROM "user" WHERE id=$1`, [user_id]);
-
-    if (user.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Invalid User",
-      });
-    }
 
     const query = await dbQuery(
       `SELECT * FROM jackpot_declear_result
@@ -982,11 +965,6 @@ exports.jackpotGameChart = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.jackpotResultChart = async (req, res) => {
   try {
-    // ── Auth check ────────────────────────────────────────────────────────────
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ status: false, message: "Unauthorized" });
-    }
-
     const days = parseInt(req.query.days || req.body?.days) || 365;
     const fromParam = req.query.from || req.body?.from || null;
     const toParam   = req.query.to   || req.body?.to   || null;

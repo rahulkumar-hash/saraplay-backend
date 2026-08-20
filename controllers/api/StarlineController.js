@@ -550,15 +550,6 @@ exports.starlineGameRates = async (req, res) => {
 
 exports.starlineGameChart = async (req, res) => {
   try {
-    // 🔐 Token validation
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        status: false,
-        message: "Unauthorized",
-      });
-    }
-
-    const user_id = req.user.id;
     const { date } = req.body || {};
 
     // 📅 Date format (default today)
@@ -584,18 +575,6 @@ exports.starlineGameChart = async (req, res) => {
         day: "2-digit",
         month: "short",
         year: "numeric",
-      });
-    }
-
-    // ✅ Check user exists
-    const userCheck = await dbQuery("SELECT id FROM users WHERE id=$1", [
-      user_id,
-    ]);
-
-    if (userCheck.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Invalid User",
       });
     }
 
@@ -778,10 +757,6 @@ exports.declareStarlineResult = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.starlineResultChart = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ status: false, message: "Unauthorized" });
-    }
-
     const days = parseInt(req.query.days || req.body?.days) || 365;
     const fromParam = req.query.from || req.body?.from || null;
     const toParam   = req.query.to   || req.body?.to   || null;

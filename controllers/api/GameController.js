@@ -848,18 +848,8 @@ exports.declearDigit = async (req, res) => {
 
 exports.gameChartList = async (req, res) => {
   try {
-    // 🔐 Token validation
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        status: false,
-        message: "Unauthorized",
-      });
-    }
-
-    const user_id = req.user.id;
-
     // 📅 Date filter (default today)
-    let inputDate = req.body?.date;
+    let inputDate = req.body?.date || req.query?.date;
     let date;
 
     if (inputDate) {
@@ -875,18 +865,6 @@ exports.gameChartList = async (req, res) => {
         day: "2-digit",
         month: "short",
         year: "numeric",
-      });
-    }
-
-    // ✅ Check user exists
-    const userCheck = await dbQuery("SELECT id FROM users WHERE id=$1", [
-      user_id,
-    ]);
-
-    if (userCheck.rows.length === 0) {
-      return res.json({
-        status: false,
-        message: "Invalid User",
       });
     }
 
