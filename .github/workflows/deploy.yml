@@ -6,12 +6,29 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/rahulkumar-hash/saraplay-backend:latest
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.0
@@ -19,39 +36,21 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
-
           script: |
-            set -e
-
-            cd /var/www/SARAPLAY-BACKEND
-
-            echo "Pull latest code..."
-            git fetch origin
-            git reset --hard origin/main
-
-            echo "Building Docker image..."
-            docker build -t saraplay-backend:latest .
-
-            echo "Stopping old backend..."
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u rahulkumar-hash --password-stdin
+            docker pull ghcr.io/rahulkumar-hash/saraplay-backend:latest
             docker stop saraplay-backend || true
             docker rm -f saraplay-backend || true
-
-            echo "Starting backend..."
-
             docker run -d \
               --restart always \
               --name saraplay-backend \
               --network saraplay-network \
-              --env-file /var/www/SARAPLAY-BACKEND/.env.production \
-              -v /var/www/SARAPLAY-BACKEND/firebase.json:/app/firebase.json:ro \
+              --env-file /etc/saraplay/.env.production \
+              -v /etc/saraplay/firebase.json:/app/firebase.json:ro \
               -p 3003:3003 \
-              saraplay-backend:latest
-
-            echo "Checking backend..."
+              ghcr.io/rahulkumar-hash/saraplay-backend:latest
             sleep 5
             docker ps --filter "name=saraplay-backend"
-
-            echo "Backend logs..."
-            docker logs saraplay-backend --tail 50
-
+            docker logs saraplay-backend --tail 20
             docker image prune -f
+            echo "Backend deployed!"
