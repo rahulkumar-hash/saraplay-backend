@@ -1,0 +1,18 @@
+name: Fix SSH Access
+on:
+  workflow_dispatch:
+jobs:
+  fix-access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore SSH Access
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          script: |
+            echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEWi53BAJ1Jlt1tO86g4ZSRpK9ynmRpNxZgVHmFzsVEJ rahul-personal" >> /root/.ssh/authorized_keys
+            sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+            systemctl restart ssh
+            echo "Done!"
