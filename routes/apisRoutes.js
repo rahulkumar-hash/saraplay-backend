@@ -139,8 +139,8 @@ router.get("/starline/rates", jwtAuth, StarlineController.starlineGameRates);
 
 router.post("/starline/history", jwtAuth, StarlineController.starlineBidHistory);
 router.post("/starline/game-status", jwtAuth, StarlineController.starlineGameStatus);
-router.post("/starline/game-chart", jwtAuth, StarlineController.starlineGameChart);
-router.get("/starline/result-chart", jwtAuth, StarlineController.starlineResultChart);
+router.post("/starline/game-chart", StarlineController.starlineGameChart);
+router.get("/starline/result-chart", StarlineController.starlineResultChart);
 
 
 
@@ -219,11 +219,11 @@ router.post("/new-win-history", jwtAuth, GameController.newWinHistory);
 // router.get("/games/advanced", jwtAuth, GameController.getGamesAdvanced);
 
 
-router.get("/game/chart-list", jwtAuth, GameController.gameChartList);
-router.get("/game/jodi-chart", jwtAuth, GameController.getGameJodiChart);
-router.post("/game/jodi-chart", jwtAuth, GameController.getGameJodiChart);
-router.get("/game/panel-chart", jwtAuth, GameController.getGamePanelChart);
-router.post("/game/panel-chart", jwtAuth, GameController.getGamePanelChart);
+router.get("/game/chart-list", GameController.gameChartList);
+router.get("/game/jodi-chart", GameController.getGameJodiChart);
+router.post("/game/jodi-chart", GameController.getGameJodiChart);
+router.get("/game/panel-chart", GameController.getGamePanelChart);
+router.post("/game/panel-chart", GameController.getGamePanelChart);
 
 
 
@@ -282,8 +282,8 @@ router.get("/jackpot/games", jwtAuth, JackpotController.getJackpotGames);
 router.post("/jackpot/place-bids", jwtAuth, JackpotController.addBulkBids);
 router.post("/jackpot/bid-history", jwtAuth, JackpotController.jackpotBidHistory);
 router.post("/jackpot/win-history", jwtAuth, JackpotController.jackpotWinHistory);
-router.post("/jackpot/game-chart", jwtAuth, JackpotController.jackpotGameChart);
-router.get("/jackpot/result-chart", jwtAuth, JackpotController.jackpotResultChart);
+router.post("/jackpot/game-chart", JackpotController.jackpotGameChart);
+router.get("/jackpot/result-chart", JackpotController.jackpotResultChart);
 
 
 
