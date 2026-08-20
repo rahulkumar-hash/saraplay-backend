@@ -102,7 +102,35 @@ exports.getGamesForDeclare = async (req, res) => {
       ORDER BY g.id ASC
     `, [dateISO, dateFmt]);
 
-    res.json(result.rows);
+    const parseTimeToMinutes = (timeStr) => {
+      if (!timeStr || typeof timeStr !== "string") return 0;
+      const cleaned = timeStr.trim().toUpperCase();
+      const m = moment(cleaned, ["hh:mm A", "h:mm A", "hh:mmA", "h:mmA", "HH:mm", "H:mm"]);
+      if (m.isValid()) {
+        return m.hours() * 60 + m.minutes();
+      }
+      const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const meridiem = match[3] ? match[3].toUpperCase() : "";
+        if (meridiem === "PM" && hours < 12) hours += 12;
+        if (meridiem === "AM" && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+      }
+      return 0;
+    };
+
+    const sortedGames = (result.rows || []).sort((a, b) => {
+      const openA = parseTimeToMinutes(a.open_time);
+      const openB = parseTimeToMinutes(b.open_time);
+      if (openA !== openB) return openA - openB;
+      const closeA = parseTimeToMinutes(a.close_time);
+      const closeB = parseTimeToMinutes(b.close_time);
+      return closeA - closeB;
+    });
+
+    res.json(sortedGames);
   } catch (err) {
     console.error("getGamesForDeclare error:", err);
     res.json([]);
