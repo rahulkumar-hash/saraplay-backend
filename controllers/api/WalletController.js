@@ -32,10 +32,10 @@ exports.walletRecharge = async (req, res) => {
 
     await client.query("BEGIN");
 
-    // ✅ Get last wallet record (excluding Master role)
+    // ✅ Get last wallet record
     const lastTxn = await client.query(
       `SELECT txn_clbal FROM wallet
-       WHERE user_id=$1 AND role!='Master'
+       WHERE user_id=$1
        ORDER BY id DESC
        LIMIT 1`,
       [user_id]
