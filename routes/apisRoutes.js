@@ -219,6 +219,8 @@ router.post("/new-win-history", jwtAuth, GameController.newWinHistory);
 // router.get("/games/advanced", jwtAuth, GameController.getGamesAdvanced);
 
 
+
+
 router.get("/game/chart-list", GameController.gameChartList);
 router.get("/game/jodi-chart", GameController.getGameJodiChart);
 router.post("/game/jodi-chart", GameController.getGameJodiChart);
