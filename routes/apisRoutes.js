@@ -265,8 +265,8 @@ const AppController = require("../controllers/api/AppController");
 
 router.get("/app/banner", jwtAuth, cache(60), AppController.getBanner);
 
-router.get("/app/limitations", jwtAuth,cache(30), AppController.getAppLimitations);
-router.get("/app/maintenance", jwtAuth,AppController.getAppMaintenance);
+router.get("/app/limitations", cache(30), AppController.getAppLimitations);
+router.get("/app/maintenance", AppController.getAppMaintenance);
 // router.get("/app/referal-code", jwtAuth, AppController.getReferalCode);
 
 
