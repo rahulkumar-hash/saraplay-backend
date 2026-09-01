@@ -169,14 +169,14 @@ const dbQuery = require("./dbQuery");
  */
 const sendResultBroadcastNotification = async (title, body) => {
   try {
-    // Direct Push ONLY to users who have NOT disabled result notification
+    // Direct Push ONLY to users who have explicitly enabled result notifications (notif_result = 1)
     const userTokens = await dbQuery(
       `SELECT DISTINCT fcm_token 
        FROM "users" 
        WHERE fcm_token IS NOT NULL 
          AND fcm_token != ''
-         AND COALESCE(notif_result, 1) = 1
-         AND (notification_status IS NULL OR notification_status = '1' OR notification_status = 'true' OR notification_status = true)`
+         AND notif_result::text = '1'
+         AND (notification_status IS NULL OR notification_status = '1' OR notification_status = 'true' OR notification_status = '')`
     );
 
     const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
