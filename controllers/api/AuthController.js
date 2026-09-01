@@ -703,7 +703,7 @@ exports.updateFCM = async (req, res) => {
   const userId = req.user.id;
 
   await dbQuery(
-    "UPDATE user SET fcm=$1 WHERE id=$2",
+    "UPDATE users SET fcm_token=$1 WHERE id=$2",
     [fcm_token, userId]
   );
 

@@ -88,9 +88,8 @@ router.post("/jackpot-bid-history", jwtAuth, BidController.jackpotBidHistory);
 
 
 
-// router.post("/user/update", jwtAuth, AuthController.updateFCM);
-
-
+router.post("/user/update", jwtAuth, UtilityController.updateFcm);
+router.post("/user/fcm-token", jwtAuth, UtilityController.updateFcm);
 
 router.post("/user/change-mpin", jwtAuth, AuthController.changeMpin);
 // router.get("/user/profile", jwtAuth, AuthController.getUserData);
