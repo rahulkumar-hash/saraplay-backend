@@ -163,23 +163,51 @@ exports.starlinePlacedBid = async (req, res) => {
       year: "numeric",
     });
 
+    const settingRes = await client.query(
+      "SELECT min_bid, max_bid FROM main_setting WHERE id = 1"
+    );
+    const minBid = (settingRes.rows.length && settingRes.rows[0].min_bid)
+      ? Number(settingRes.rows[0].min_bid)
+      : 10;
+    const maxBid = (settingRes.rows.length && settingRes.rows[0].max_bid)
+      ? Number(settingRes.rows[0].max_bid)
+      : 100000;
+
     for (const val of bulkData) {
       const {
         value,
-        tv_pointsvalue: points,
+        tv_pointsvalue: pointsRaw,
         str_tool: game_type,
         str_gameid: game_id,
       } = val;
+
+      const points = Number(pointsRaw);
+
+      if (isNaN(points) || points < minBid) {
+        await client.query("ROLLBACK");
+        return res.json({
+          status: false,
+          message: `Minimum bid amount is ₹${minBid}`,
+        });
+      }
+
+      if (maxBid && points > maxBid) {
+        await client.query("ROLLBACK");
+        return res.json({
+          status: false,
+          message: `Maximum bid amount is ₹${maxBid}`,
+        });
+      }
 
       const bidTxnId = Math.floor(10000000 + Math.random() * 90000000);
       const txnId = Math.floor(10000000 + Math.random() * 90000000);
 
       let winAmount = 0;
 
-      if (game_type === "Single Digit") winAmount = points * singleDigit;
-      else if (game_type === "Single Pana") winAmount = points * singlePana;
-      else if (game_type === "Double Pana") winAmount = points * doublePana;
-      else if (game_type === "Tripple Pana") winAmount = points * tripplePana;
+      if (game_type === "Single Digit" || game_type === "Single") winAmount = points * singleDigit;
+      else if (game_type === "Single Pana" || game_type === "SP Pana" || game_type === "SP Motor") winAmount = points * singlePana;
+      else if (game_type === "Double Pana" || game_type === "DP Pana" || game_type === "DP Motor") winAmount = points * doublePana;
+      else if (game_type === "Tripple Pana" || game_type === "TP Pana" || game_type === "Triple Panna" || game_type === "Triple Pana") winAmount = points * tripplePana;
 
       if (currentBalance < points) {
         await client.query("ROLLBACK");

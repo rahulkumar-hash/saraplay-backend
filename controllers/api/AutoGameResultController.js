@@ -4,7 +4,8 @@ const dbQuery = require("../../utils/dbQuery");
 const {
   sendSingleNotification,
   sendBulkNotificationNew,
-  sendAll
+  sendAll,
+  sendResultBroadcastNotification
 } = require("../../utils/sendNotification");
 const moment = require("moment");
 
@@ -474,27 +475,47 @@ exports.autoResultDeclare = async (req, res) => {
       for (let bid of bidsRes.rows) {
         let won = false;
         const betPana = normalizeVal(bid.pana);
+        const gType = String(bid.game_type || "").trim();
 
-        switch (bid.game_type) {
-          case "Single Digit":
-            if (betPana === openDigit) won = true;
-            break;
-
-          case "Single Pana":
-            if (betPana === openPana) won = true;
-            break;
-
-          case "Double Pana":
-            if (betPana === openPana) won = true;
-            break;
-            
-          case "Tripple Pana":
-            if (betPana === openPana) won = true;
-            break;
+        if (gType === "Single Digit" || gType === "Single") {
+          if (betPana === openDigit) won = true;
+        } else if (gType === "Odd Even") {
+          const num = parseInt(openDigit, 10);
+          if (!isNaN(num)) {
+            const isOdd = num % 2 !== 0;
+            if ((betPana.toLowerCase() === "odd" && isOdd) || (betPana.toLowerCase() === "even" && !isOdd)) {
+              won = true;
+            }
+          }
+        } else if (
+          gType === "Single Pana" ||
+          gType === "SP Pana" ||
+          gType === "SP Motor" ||
+          gType === "SP" ||
+          gType === "Single Pana Bulk" ||
+          gType === "Single Panna"
+        ) {
+          if (betPana === openPana) won = true;
+        } else if (
+          gType === "Double Pana" ||
+          gType === "DP Pana" ||
+          gType === "DP Motor" ||
+          gType === "DP" ||
+          gType === "Double Panna Bulk" ||
+          gType === "Double Panna"
+        ) {
+          if (betPana === openPana) won = true;
+        } else if (
+          gType === "Tripple Pana" ||
+          gType === "TP Pana" ||
+          gType === "TP" ||
+          gType === "Triple Panna" ||
+          gType === "Triple Pana"
+        ) {
+          if (betPana === openPana) won = true;
         }
 
         if (won) {
-          // await creditWinning(client, bid, game_id, rdate, dateStr, dateOnly);
           const token = await creditWinning(client, bid, {
             game_id: game_id,
             result_date: rdate
@@ -503,55 +524,45 @@ exports.autoResultDeclare = async (req, res) => {
           if (token) {
             winnerTokens.push(token);
           }
-
         }
       }
 
-      // console.log("Winner Tokens:", winnerTokens.length);
-
-
       if (winnerTokens.length > 0) {
-
         await sendBulkNotifications(
           winnerTokens,
           "🎉 Winning Amount Credited",
           "Winning amount credited successfully"
         );
-
       }
 
-      
-        const game = await dbQuery(`
-            SELECT name
-            FROM game
-            WHERE id = $1
-        `, [
-            game_id
-        ]);
+      const game = await dbQuery(`
+          SELECT name
+          FROM game
+          WHERE id = $1
+      `, [
+          game_id
+      ]);
 
-        const title =
-        aankdo_open +
-        "-" +
-        figure_open +
-        "*-***";
+      const title =
+      aankdo_open +
+      "-" +
+      figure_open +
+      "*-***";
 
-        const body =
-        (game.rows[0]?.name || market_name)
-        + " Result";
+      const body =
+      (game.rows[0]?.name || market_name)
+      + " Result";
 
-        console.log(
-        "OPEN PUSH:",
+      console.log(
+      "OPEN PUSH:",
+      title,
+      body
+      );
+
+      await sendResultBroadcastNotification(
         title,
         body
-        );
-
-        await sendAll(
-          "all",
-          title,
-          body
-        );
-
-
+      );
 
       return res.json({ res: "success", msg: "Open Result Declared" });
     }
@@ -597,64 +608,71 @@ exports.autoResultDeclare = async (req, res) => {
       
       // LOOP
       for (let bid of bidsRes.rows) {
-
         let won = false;
-
         const betPana = normalizeVal(bid.pana);
+        const gType = String(bid.game_type || "").trim();
+        const bSession = String(bid.session || "").trim();
 
-        // console.log(bid.game_type +"==="+ "Single Digit" +"&& "+ betPana +"==="+ closeDigit);
-       
-        if (
-          bid.game_type === "Single Digit" &&
-          betPana === closeDigit
-        ) {
-          won = true;
+        if (bSession === "Close") {
+          if (gType === "Single Digit" || gType === "Single") {
+            if (betPana === closeDigit) won = true;
+          } else if (gType === "Odd Even") {
+            const num = parseInt(closeDigit, 10);
+            if (!isNaN(num)) {
+              const isOdd = num % 2 !== 0;
+              if ((betPana.toLowerCase() === "odd" && isOdd) || (betPana.toLowerCase() === "even" && !isOdd)) {
+                won = true;
+              }
+            }
+          } else if (
+            gType === "Single Pana" ||
+            gType === "SP Pana" ||
+            gType === "SP Motor" ||
+            gType === "SP" ||
+            gType === "Single Pana Bulk" ||
+            gType === "Single Panna"
+          ) {
+            if (betPana === closePana) won = true;
+          } else if (
+            gType === "Double Pana" ||
+            gType === "DP Pana" ||
+            gType === "DP Motor" ||
+            gType === "DP" ||
+            gType === "Double Panna Bulk" ||
+            gType === "Double Panna"
+          ) {
+            if (betPana === closePana) won = true;
+          } else if (
+            gType === "Tripple Pana" ||
+            gType === "TP Pana" ||
+            gType === "TP" ||
+            gType === "Triple Panna" ||
+            gType === "Triple Pana"
+          ) {
+            if (betPana === closePana) won = true;
+          }
         }
 
-        // console.log(won);
-       
         if (
-          (
-            bid.game_type === "Single Pana" ||
-            bid.game_type === "Double Pana" ||
-            bid.game_type === "Tripple Pana"
-          )
-          &&
-          betPana === closePana
+          gType === "Jodi Digit" ||
+          gType === "Jodi" ||
+          gType === "Red Brackets" ||
+          gType === "Group Jodi" ||
+          gType === "Two Digits Panel"
         ) {
-          won = true;
+          if (betPana === jodiResult) won = true;
         }
 
-        
-        if (
-          bid.game_type === "Jodi Digit" &&
-          betPana === jodiResult
-        ) {
-          won = true;
+        if (gType === "Full Sangam") {
+          if (betPana === full) won = true;
         }
 
-        
-        if (
-          bid.game_type === "Full Sangam" &&
-          betPana === full
-        ) {
-          won = true;
-        }
-
-       
-        if (
-          bid.game_type === "Half Sangam" &&
-          (
-            betPana === half1 ||
-            betPana === half2
-          )
-        ) {
-          won = true;
+        if (gType === "Half Sangam" || gType === "Half Sangam A" || gType === "Half Sangam B") {
+          if (betPana === half1 || betPana === half2) won = true;
         }
 
         // CREDIT
         if (won) {
-
           const token = await creditWinning(client, bid, {
             game_id: game_id,
             result_date: rdate
@@ -663,23 +681,18 @@ exports.autoResultDeclare = async (req, res) => {
           if (token) {
             winnerTokens.push(token);
           }
-
         }
-
       }
 
       console.log("Winner Tokens:", winnerTokens.length);
       if (winnerTokens.length > 0) {
-
         await sendBulkNotifications(
           winnerTokens,
           "🎉 Winning Amount Credited",
           "Winning amount credited successfully"
         );
-
       }
 
-    
       const game = await dbQuery(`
           SELECT name
           FROM game
@@ -706,8 +719,7 @@ exports.autoResultDeclare = async (req, res) => {
       body
       );
 
-      await sendAll(
-        "all",
+      await sendResultBroadcastNotification(
         title,
         body
       );

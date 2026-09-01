@@ -698,12 +698,25 @@ exports.declareResult = async (req, res) => {
 
         console.log(`   👉 Checking Bid #${v.id} | User ID: ${v.user_id} | Type: '${gameType}' | Pana/Digit: '${panaVal}' | Points: ${v.points}`);
 
+        let isWinner = false;
         if (
           (panaVal === openDigitVal && (gameType === "Single Digit" || gameType === "Single")) ||
-          (panaVal === openPanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP")) ||
-          (panaVal === openPanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP")) ||
-          (panaVal === openPanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP"))
+          (panaVal === openPanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP Motor" || gameType === "SP" || gameType === "Single Pana Bulk" || gameType === "Single Panna")) ||
+          (panaVal === openPanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP Motor" || gameType === "DP" || gameType === "Double Panna Bulk" || gameType === "Double Panna")) ||
+          (panaVal === openPanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP" || gameType === "Triple Panna" || gameType === "Triple Pana"))
         ) {
+          isWinner = true;
+        } else if (gameType === "Odd Even") {
+          const num = parseInt(openDigitVal, 10);
+          if (!isNaN(num)) {
+            const isOdd = num % 2 !== 0;
+            if ((panaVal.toLowerCase() === "odd" && isOdd) || (panaVal.toLowerCase() === "even" && !isOdd)) {
+              isWinner = true;
+            }
+          }
+        }
+
+        if (isWinner) {
           winnerCount++;
           console.log(`   🎉 [OPEN WINNER MATCHED!] User ID: ${v.user_id} | Type: ${gameType} | Pana: ${panaVal}`);
           await creditWallet(v, data);
@@ -719,7 +732,7 @@ exports.declareResult = async (req, res) => {
       var body = (game.rows[0]?.name || 'Game') + ' Result';
 
       try {
-        await sendAll("all", title, body);
+        await sendResultBroadcastNotification(title, body);
         console.log(`📲 Broadcast Notification Sent: ${title}`);
       } catch (fcmErr) {
         console.error("❌ FCM Broadcast Error:", fcmErr);
@@ -775,19 +788,33 @@ exports.declareResult = async (req, res) => {
         if (v.session === "Close") {
           if (
             (panaVal === closeDigitVal && (gameType === "Single Digit" || gameType === "Single")) ||
-            (panaVal === closePanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP")) ||
-            (panaVal === closePanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP")) ||
-            (panaVal === closePanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP"))
+            (panaVal === closePanaVal && (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP Motor" || gameType === "SP" || gameType === "Single Pana Bulk" || gameType === "Single Panna")) ||
+            (panaVal === closePanaVal && (gameType === "Double Pana" || gameType === "DP Pana" || gameType === "DP Motor" || gameType === "DP" || gameType === "Double Panna Bulk" || gameType === "Double Panna")) ||
+            (panaVal === closePanaVal && (gameType === "Tripple Pana" || gameType === "TP Pana" || gameType === "TP" || gameType === "Triple Panna" || gameType === "Triple Pana"))
           ) {
             isWinner = true;
+          } else if (gameType === "Odd Even") {
+            const num = parseInt(closeDigitVal, 10);
+            if (!isNaN(num)) {
+              const isOdd = num % 2 !== 0;
+              if ((panaVal.toLowerCase() === "odd" && isOdd) || (panaVal.toLowerCase() === "even" && !isOdd)) {
+                isWinner = true;
+              }
+            }
           }
         }
 
-        if (gameType === "Jodi Digit" || gameType === "Jodi") {
+        if (
+          gameType === "Jodi Digit" ||
+          gameType === "Jodi" ||
+          gameType === "Red Brackets" ||
+          gameType === "Group Jodi" ||
+          gameType === "Two Digits Panel"
+        ) {
           if (panaVal === jodi.trim()) isWinner = true;
         }
 
-        if (gameType === "Half Sangam") {
+        if (gameType === "Half Sangam" || gameType === "Half Sangam A" || gameType === "Half Sangam B") {
           if (panaVal === half1.trim() || panaVal === half2.trim()) isWinner = true;
         }
 
@@ -837,15 +864,33 @@ async function creditWallet(bid, result) {
     // Fallback calculation if win_amount is missing or zero
     if (amount <= 0 && Number(bid.points) > 0) {
       const points = Number(bid.points);
-      const gType = String(bid.game_type || "");
-      if (gType.includes("Single Digit") || gType === "Single") amount = points * 9.5;
-      else if (gType.includes("Jodi")) amount = points * 95;
-      else if (gType.includes("Single Pana") || gType.includes("SP")) amount = points * 140;
-      else if (gType.includes("Double Pana") || gType.includes("DP")) amount = points * 280;
-      else if (gType.includes("Tripple Pana") || gType.includes("TP")) amount = points * 600;
-      else if (gType.includes("Half Sangam")) amount = points * 1000;
-      else if (gType.includes("Full Sangam")) amount = points * 10000;
-      else amount = points * 9.5;
+      const gType = String(bid.game_type || "").trim();
+      let singleDigit = 9.5, jodiDigit = 95, singlePana = 140, doublePana = 280, tripplePana = 600, halfSangam = 1000, fullSangam = 10000;
+
+      try {
+        const rateRes = await dbQuery("SELECT * FROM game_rate WHERE id = 1");
+        if (rateRes.rows.length) {
+          const rate = rateRes.rows[0];
+          if (rate.single_digit1) singleDigit = rate.single_digit2 / rate.single_digit1;
+          if (rate.jodi_digit1) jodiDigit = rate.jodi_digit2 / rate.jodi_digit1;
+          if (rate.single_pana1) singlePana = rate.single_pana2 / rate.single_pana1;
+          if (rate.double_pana1) doublePana = rate.double_pana2 / rate.double_pana1;
+          if (rate.tripple_pana1) tripplePana = rate.tripple_pana2 / rate.tripple_pana1;
+          if (rate.half_sangam1) halfSangam = rate.half_sangam2 / rate.half_sangam1;
+          if (rate.full_sangam1) fullSangam = rate.full_sangam2 / rate.full_sangam1;
+        }
+      } catch (rErr) {
+        console.error("game_rate query error in creditWallet:", rErr);
+      }
+
+      if (gType.includes("Single Digit") || gType === "Single" || gType === "Odd Even") amount = points * singleDigit;
+      else if (gType.includes("Jodi") || gType.includes("Red Brackets") || gType.includes("Two Digits Panel") || gType.includes("Group Jodi")) amount = points * jodiDigit;
+      else if (gType.includes("Single Pana") || gType.includes("SP Pana") || gType.includes("SP Motor") || gType.includes("SP") || gType.includes("Single Panna")) amount = points * singlePana;
+      else if (gType.includes("Double Pana") || gType.includes("DP Pana") || gType.includes("DP Motor") || gType.includes("DP") || gType.includes("Double Panna")) amount = points * doublePana;
+      else if (gType.includes("Tripple Pana") || gType.includes("TP Pana") || gType.includes("TP") || gType.includes("Triple")) amount = points * tripplePana;
+      else if (gType.includes("Half Sangam")) amount = points * halfSangam;
+      else if (gType.includes("Full Sangam")) amount = points * fullSangam;
+      else amount = points * singleDigit;
     }
     amount = Math.round(amount);
 

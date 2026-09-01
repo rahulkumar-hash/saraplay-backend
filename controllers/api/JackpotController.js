@@ -84,57 +84,15 @@ exports.addBulkBids = async (req, res) => {
   const now = new Date();
   const game_date = now.toISOString().slice(0, 10);
 
-  // for (const bid of bids) {
-
-  //   console.log("---- NEW BID ----");
-  //   console.log("Bid:", bid);
-
-  //   const user_id = Number(bid.str_userid);
-  //   const game_id = Number(bid.str_gameid);
-  //   const digit = bid.value;
-  //   const points = Number(bid.tv_pointsvalue);
-
-  //   console.log({ user_id, game_id, digit, points });
-
-  //   // game check
-  //   const game = await dbQuery(
-  //     `SELECT * FROM jackpot WHERE id=$1`,
-  //     [game_id]
-  //   );
-
-  //   console.log("Game Found:", game.rows.length);
-
-  //   if (game.rows.length === 0) {
-  //     console.log("❌ Game Not Found");
-  //     continue;
-  //   }
-
-  //   // wallet check
-  //   const wallet = await dbQuery(
-  //     `SELECT * FROM wallet
-  //     WHERE user_id=$1
-  //     ORDER BY id DESC
-  //     LIMIT 1`,
-  //     [user_id]
-  //   );
-
-  //   console.log("Wallet Found:", wallet.rows.length);
-
-  //   if (wallet.rows.length === 0) {
-  //     console.log("❌ Wallet Not Found");
-  //     continue;
-  //   }
-
-  //   const closing = Number(wallet.rows[0].txn_clbal);
-  //   console.log("Balance:", closing);
-
-  //   if (closing < points) {
-  //     console.log("❌ Insufficient Balance");
-  //     continue;
-  //   }
-
-  //   console.log("✅ VALID BID - WILL INSERT");
-  // }
+  const settingRes = await dbQuery(
+    "SELECT min_bid, max_bid FROM main_setting WHERE id = 1"
+  );
+  const minBid = (settingRes.rows.length && settingRes.rows[0].min_bid)
+    ? Number(settingRes.rows[0].min_bid)
+    : 10;
+  const maxBid = (settingRes.rows.length && settingRes.rows[0].max_bid)
+    ? Number(settingRes.rows[0].max_bid)
+    : 100000;
 
   for (const bid of bids) {
     if (
@@ -151,7 +109,7 @@ exports.addBulkBids = async (req, res) => {
     const digit = bid.value;
     const points = Number(bid.tv_pointsvalue);
 
-    if (user_id <= 0 || game_id <= 0 || points <= 0 || digit === "") {
+    if (user_id <= 0 || game_id <= 0 || points < minBid || (maxBid && points > maxBid) || digit === "") {
       continue;
     }
 

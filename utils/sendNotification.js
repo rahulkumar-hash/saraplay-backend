@@ -165,30 +165,26 @@ const sendAll = async (topic, title, body) => {
 const dbQuery = require("./dbQuery");
 
 /**
- * 📢 Complete Result Broadcast (Topic + Direct Webview/Android User Tokens)
+ * 📢 Result Notification (Delivered ONLY to users who have result notifications ON in settings)
  */
 const sendResultBroadcastNotification = async (title, body) => {
   try {
-    // 1. Broadcast to Topic "all"
-    try {
-      await sendAll("all", title, body);
-      console.log(`📲 [FCM BROADCAST TOPIC 'all'] Title: ${title} | Body: ${body}`);
-    } catch (tErr) {
-      console.error("❌ FCM Topic Broadcast Error:", tErr);
-    }
+    // Direct Push ONLY to users who have NOT disabled result notification
+    const userTokens = await dbQuery(
+      `SELECT DISTINCT fcm_token 
+       FROM "users" 
+       WHERE fcm_token IS NOT NULL 
+         AND fcm_token != ''
+         AND COALESCE(notif_result, 1) = 1
+         AND (notification_status IS NULL OR notification_status = '1' OR notification_status = 'true' OR notification_status = true)`
+    );
 
-    // 2. Direct Push to all registered user FCM Tokens (Android Webview / App users)
-    try {
-      const userTokens = await dbQuery(
-        `SELECT DISTINCT fcm_token FROM "users" WHERE fcm_token IS NOT NULL AND fcm_token != ''`
-      );
-      const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
-      if (tokens.length > 0) {
-        await sendBulkNotificationNew(tokens, title, body);
-        console.log(`📲 [FCM DIRECT TOKENS] Sent notification to ${tokens.length} active device tokens`);
-      }
-    } catch (uErr) {
-      console.error("❌ FCM Direct Token Error:", uErr);
+    const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
+    if (tokens.length > 0) {
+      await sendBulkNotificationNew(tokens, title, body);
+      console.log(`📲 [FCM RESULT NOTIFICATION] Sent to ${tokens.length} eligible users (result notification enabled)`);
+    } else {
+      console.log(`ℹ️ [FCM RESULT NOTIFICATION] No eligible users with active result notification preference.`);
     }
   } catch (err) {
     console.error("❌ Result Broadcast Notification Error:", err);

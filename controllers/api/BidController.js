@@ -311,6 +311,16 @@ exports.placedBid = async (req, res) => {
       const halfSangam = rate.half_sangam2 / rate.half_sangam1;
       const fullSangam = rate.full_sangam2 / rate.full_sangam1;
 
+      const settingRes = await client.query(
+         "SELECT min_bid, max_bid FROM main_setting WHERE id = 1"
+      );
+      const minBid = (settingRes.rows.length && settingRes.rows[0].min_bid)
+         ? Number(settingRes.rows[0].min_bid)
+         : 10;
+      const maxBid = (settingRes.rows.length && settingRes.rows[0].max_bid)
+         ? Number(settingRes.rows[0].max_bid)
+         : 100000;
+
       for (const val of data) {
 
          if (!val.str_gameid || !val.tv_pointsvalue || !val.str_tool) {
@@ -333,6 +343,26 @@ exports.placedBid = async (req, res) => {
             return res.json({
                status: false,
                message: "Invalid Points Value"
+            });
+         }
+
+         if (points < minBid) {
+
+            await client.query("ROLLBACK");
+
+            return res.json({
+               status: false,
+               message: `Minimum bid amount is ₹${minBid}`
+            });
+         }
+
+         if (maxBid && points > maxBid) {
+
+            await client.query("ROLLBACK");
+
+            return res.json({
+               status: false,
+               message: `Maximum bid amount is ₹${maxBid}`
             });
          }
 
@@ -427,23 +457,23 @@ exports.placedBid = async (req, res) => {
 
          let winAmount = 0;
 
-         if (["Single Digit", "Odd Even"].includes(gameType)) {
+         if (["Single Digit", "Single", "Odd Even"].includes(gameType)) {
             winAmount = points * singleDigit;
          }
-         else if (isGroupB) {
+         else if (isGroupB || gameType === "Jodi") {
             winAmount = points * jodiDigit;
             session = "Close";   // Group B always Close (Document Section 1)
          }
-         else if (gameType === "Single Pana" || gameType === "SP Pana" || gameType === "SP Motor") {
+         else if (["Single Pana", "SP Pana", "SP Motor", "Single Pana Bulk", "Single Panna"].includes(gameType)) {
             winAmount = points * singlePana;
          }
-         else if (gameType === "Double Pana" || gameType === "DP Pana") {
+         else if (["Double Pana", "DP Pana", "DP Motor", "Double Panna Bulk", "Double Panna"].includes(gameType)) {
             winAmount = points * doublePana;
          }
-         else if (gameType === "Tripple Pana" || gameType === "TP Pana") {
+         else if (["Tripple Pana", "TP Pana", "TP", "Triple Panna", "Triple Pana"].includes(gameType)) {
             winAmount = points * tripplePana;
          }
-         else if (gameType === "Half Sangam") {
+         else if (["Half Sangam", "Half Sangam A", "Half Sangam B"].includes(gameType)) {
             winAmount = points * halfSangam;
          }
          else if (gameType === "Full Sangam") {
@@ -455,7 +485,7 @@ exports.placedBid = async (req, res) => {
 
             return res.json({
                status: false,
-               message: "Invalid Game Type"
+               message: `Invalid Game Type: ${gameType}`
             });
          }
 
