@@ -8,6 +8,7 @@ const WithdrawController = require("../controllers/api/WithdrawController");
 const StarlineController = require("../controllers/api/StarlineController");
 const GameResultController = require("../controllers/api/GameResultController");
 const AutoGameResultController = require("../controllers/api/AutoGameResultController");
+const UtilityController = require("../controllers/api/UtilityController");
 const cache = require("../middleware/cache");
 
 const dbQuery = require("../utils/dbQuery");
@@ -88,7 +89,6 @@ router.post("/jackpot-bid-history", jwtAuth, BidController.jackpotBidHistory);
 
 
 
-router.post("/user/update", jwtAuth, UtilityController.updateFcm);
 router.post("/user/fcm-token", jwtAuth, UtilityController.updateFcm);
 
 router.post("/user/change-mpin", jwtAuth, AuthController.changeMpin);
@@ -175,8 +175,6 @@ router.get("/starline/result-chart", StarlineController.starlineResultChart);
 
 
 
-
-const UtilityController = require("../controllers/api/UtilityController");
 
 router.get("/apk-update",jwtAuth, cache(60), UtilityController.getApkUpdate);
 router.post("/notification/update",jwtAuth, UtilityController.updateNotificationStatus);
