@@ -243,8 +243,10 @@ exports.getTodayBidDetails = async (req, res) => {
     const d = new Date();
 
     const today = `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    const todayYMD = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dateLike = `${todayYMD}%`;
     
-    console.log("DATE:", today);
+    console.log("DATE:", today, "YMD:", todayYMD);
 
     const result = await dbQuery(`
       SELECT 
@@ -254,9 +256,9 @@ exports.getTodayBidDetails = async (req, res) => {
       FROM user_bid
       WHERE game_id = $1
       AND session = $2
-      AND game_date = $3
+      AND (game_date = $3 OR game_date = $4 OR date::text LIKE $5)
       GROUP BY pana
-    `, [game_id, session, today]);
+    `, [game_id, session, today, todayYMD, dateLike]);
 
     let data = {};
     for (let i = 0; i <= 9; i++) {
@@ -288,31 +290,38 @@ exports.getTodayTotalBid = async (req, res) => {
   try {
     const { game_id = 'all', game_date, apicount = 0 } = req.body;
 
-    // ================= DATE FORMAT (PHP SAME) =================
+    // ================= DATE FORMAT (FLEXIBLE) =================
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const d = game_date ? new Date(game_date) : new Date();
+    let d = new Date();
+    if (game_date) {
+      if (typeof game_date === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(game_date)) {
+        const [day, month, year] = game_date.split('-');
+        d = new Date(`${year}-${month}-${day}`);
+      } else if (typeof game_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(game_date)) {
+        d = new Date(game_date);
+      } else {
+        d = new Date(game_date);
+      }
+    }
 
     const date = `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
     const dateYMD = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dateLike = `${dateYMD}%`;
 
-    console.log("DATE:", date);
-    console.log("DATE YMD:", dateYMD);
+    console.log("DATE:", date, "DATE YMD:", dateYMD);
 
     // ================= SAFE SUM FUNCTION =================
-    const safeSum = (col) => `SUM(${col}::numeric)`;
+    const safeSum = (col) => `COALESCE(SUM(${col}::numeric), 0)`;
 
     // ================= TOTAL BID =================
     let total_bid = 0;
-
-    console.log(game_id);
-
 
     if (game_id === 'all') {
       const r = await dbQuery(`
         SELECT ${safeSum('points')} as total_bid
         FROM user_bid
-        WHERE game_date = $1
-      `, [date]);
+        WHERE (game_date = $1 OR game_date = $2 OR date::text LIKE $3)
+      `, [date, dateYMD, dateLike]);
 
       total_bid = +r.rows[0].total_bid || 0;
 
@@ -320,13 +329,12 @@ exports.getTodayTotalBid = async (req, res) => {
       const r = await dbQuery(`
         SELECT ${safeSum('points')} as total_bid
         FROM user_bid
-        WHERE game_date = $1 AND game_id = $2
-      `, [date, game_id]);
+        WHERE game_id = $1 AND (game_date = $2 OR game_date = $3 OR date::text LIKE $4)
+      `, [game_id, date, dateYMD, dateLike]);
 
       total_bid = +r.rows[0].total_bid || 0;
     }
 
-    console.log(total_bid);
     // ================= TOTAL WIN =================
     let total_win = 0;
 
@@ -334,8 +342,8 @@ exports.getTodayTotalBid = async (req, res) => {
       const r = await dbQuery(`
         SELECT ${safeSum('amount')} as total_win
         FROM win_history
-        WHERE game_date = $1
-      `, [date]);
+        WHERE (game_date = $1 OR game_date = $2 OR date::text LIKE $3)
+      `, [date, dateYMD, dateLike]);
 
       total_win = +r.rows[0].total_win || 0;
 
@@ -343,69 +351,42 @@ exports.getTodayTotalBid = async (req, res) => {
       const r = await dbQuery(`
         SELECT ${safeSum('amount')} as total_win
         FROM win_history
-        WHERE game_date = $1 AND game_id = $2
-      `, [date, game_id]);
+        WHERE game_id = $1 AND (game_date = $2 OR game_date = $3 OR date::text LIKE $4)
+      `, [game_id, date, dateYMD, dateLike]);
 
       total_win = +r.rows[0].total_win || 0;
     }
-
-    
-
-     console.log(total_win);
 
     // // ================= WITHDRAW =================
     const withdrawRes = await dbQuery(`
       SELECT ${safeSum('amount')} as total_withdraw
       FROM withdraw_request
       WHERE status='Pending'
-      AND DATE(date)=$1
-    `, [date]);
+      AND (DATE(date)=$1 OR date::text LIKE $2 OR date::text=$3)
+    `, [dateYMD, dateLike, date]);
 
     const total_withdraw = +withdrawRes.rows[0].total_withdraw || 0;
-
-
-     console.log(total_withdraw);
 
     // ================= FUNDS =================
     const fundRes = await dbQuery(`
       SELECT ${safeSum('txn_crdt')} as total
       FROM wallet
       WHERE txn_comment='Direct Credit By Admin'
-      AND DATE(txn_date)=$1
-    `, [date]);
+      AND (DATE(txn_date)=$1 OR txn_date::text LIKE $2 OR txn_date::text=$3)
+    `, [dateYMD, dateLike, date]);
 
-
-    
     const upiRes = await dbQuery(`
       SELECT ${safeSum('txn_crdt')} as total
       FROM wallet
-      WHERE (txn_comment = 'Wallet Topup via Payment' OR txn_comment = 'Online UPI Credit From App')
-      AND DATE(txn_date)=$1
-    `, [date]);
+      WHERE (txn_comment = 'Wallet Topup via Payment' OR txn_comment = 'Online UPI Credit From App' OR txn_comment LIKE '%Recharge%')
+      AND (DATE(txn_date)=$1 OR txn_date::text LIKE $2 OR txn_date::text=$3)
+    `, [dateYMD, dateLike, date]);
 
     const add_fund = +fundRes.rows[0].total || 0;
     const total_deposit = +upiRes.rows[0].total || 0;
 
     // ================= LOSS =================
     const total_loss = total_bid - total_win;
-
-     console.log(total_loss);
-
-    // ================= TODAY USERS =================
-    // const todayUsersRes = await dbQuery(`
-    //   SELECT COUNT(*) FROM user
-    //   WHERE DATE(date) = $1
-    // `, [dateYMD]);
-
-    // const totalUserstoday2 = +todayUsersRes.rows[0].count || 0;
-
-    // const playersRes = await dbQuery(`
-    //   SELECT COUNT(DISTINCT user_id)
-    //   FROM user_bid
-    //   WHERE game_date LIKE $1
-    // `, [date + '%']);
-
-    // const totalUserstoday1 = +playersRes.rows[0].count || 0;
 
     // ================= FINAL RESPONSE =================
     res.json({
@@ -417,10 +398,8 @@ exports.getTodayTotalBid = async (req, res) => {
       add_fund
     });
 
-
   } catch (err) {
     console.log("ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };
-
