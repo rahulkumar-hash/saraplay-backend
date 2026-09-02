@@ -106,11 +106,8 @@ exports.walletCreditTransaction = async (req, res) => {
     const countQuery = await dbQuery(
       `SELECT COUNT(*) FROM wallet
        WHERE user_id=$1
-       AND txn_crdt != '0'
-       AND (
-            txn_comment='Direct Credit By Admin'
-            OR txn_comment='Wallet Topup via Payment'
-       )`,
+       AND txn_crdt::numeric > 0
+       AND txn_comment != 'Winning Amount'`,
       [user_id]
     );
 
@@ -121,11 +118,8 @@ exports.walletCreditTransaction = async (req, res) => {
     const walletData = await dbQuery(
       `SELECT * FROM wallet
        WHERE user_id=$1
-       AND txn_crdt != '0'
-       AND (
-            txn_comment='Direct Credit By Admin'
-            OR txn_comment='Wallet Topup via Payment'
-       )
+       AND txn_crdt::numeric > 0
+       AND txn_comment != 'Winning Amount'
        ORDER BY id DESC
        LIMIT $2 OFFSET $3`,
       [user_id, limit, offset]
