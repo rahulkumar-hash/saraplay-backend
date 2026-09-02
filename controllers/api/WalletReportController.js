@@ -102,12 +102,12 @@ exports.walletCreditTransaction = async (req, res) => {
       });
     }
 
-    // 📊 Total Count
+    // 📊 Total Count (Exclude any winning credits)
     const countQuery = await dbQuery(
       `SELECT COUNT(*) FROM wallet
-       WHERE user_id=$1
+       WHERE user_id = $1
        AND txn_crdt::numeric > 0
-       AND txn_comment != 'Winning Amount'`,
+       AND txn_comment NOT ILIKE '%win%'`,
       [user_id]
     );
 
@@ -117,9 +117,9 @@ exports.walletCreditTransaction = async (req, res) => {
     // 📄 Data Query
     const walletData = await dbQuery(
       `SELECT * FROM wallet
-       WHERE user_id=$1
+       WHERE user_id = $1
        AND txn_crdt::numeric > 0
-       AND txn_comment != 'Winning Amount'
+       AND txn_comment NOT ILIKE '%win%'
        ORDER BY id DESC
        LIMIT $2 OFFSET $3`,
       [user_id, limit, offset]
