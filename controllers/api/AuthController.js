@@ -335,9 +335,11 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ Sync FCM token if passed in login payload
+    // ✅ Sync FCM token if passed in login payload (clear from old user records first)
     if (fcm_token && fcm_token.length > 10) {
-      dbQuery("UPDATE users SET fcm_token = $1 WHERE id = $2", [fcm_token, user.id]).catch(() => {});
+      dbQuery("UPDATE users SET fcm_token = NULL WHERE fcm_token = $1 AND id != $2", [fcm_token, user.id])
+        .then(() => dbQuery("UPDATE users SET fcm_token = $1 WHERE id = $2", [fcm_token, user.id]))
+        .catch(() => {});
     }
 
     // ✅ Generate JWT Token
@@ -705,12 +707,15 @@ exports.getUserData = async (req, res) => {
 
 exports.updateFCM = async (req, res) => {
   const { fcm_token } = req.body;
-  const userId = req.user.id;
+  const userId = req.user?.id;
 
-  await dbQuery(
-    "UPDATE users SET fcm_token=$1 WHERE id=$2",
-    [fcm_token, userId]
-  );
+  if (fcm_token && userId) {
+    await dbQuery("UPDATE users SET fcm_token = NULL WHERE fcm_token = $1 AND id != $2", [fcm_token, userId]).catch(() => {});
+    await dbQuery(
+      "UPDATE users SET fcm_token=$1 WHERE id=$2",
+      [fcm_token, userId]
+    );
+  }
 
   res.json({
     status: true,
@@ -721,12 +726,14 @@ exports.updateFCM = async (req, res) => {
 
 
 exports.logout = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id;
 
-  await dbQuery(
-    "UPDATE users SET logout_status='logout' WHERE id=$1",
-    [userId]
-  );
+  if (userId) {
+    await dbQuery(
+      "UPDATE users SET logout_status='logout', fcm_token=NULL WHERE id=$1",
+      [userId]
+    );
+  }
 
   res.json({
     status: true,

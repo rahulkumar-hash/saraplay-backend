@@ -262,6 +262,13 @@ exports.updateFcm = async (req, res) => {
       });
     }
 
+    // ✅ A device token belongs to one active user at a time:
+    // Remove this fcm_token from other users to prevent ghost notifications
+    await dbQuery(
+      "UPDATE users SET fcm_token = NULL WHERE fcm_token = $1 AND id != $2",
+      [fcm_token, user_id]
+    );
+
     // ✅ Update FCM
     await dbQuery(
       "UPDATE users SET fcm_token=$1 WHERE id=$2",

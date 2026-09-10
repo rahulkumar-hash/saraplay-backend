@@ -200,12 +200,20 @@ const dbQuery = require("./dbQuery");
 const sendResultBroadcastNotification = async (title, body) => {
   try {
     // Direct Push strictly to users who have NOT disabled result notification (notif_result = 1)
+    // AND ensure that if any user on this device token has notif_result = 0, that token is strictly excluded.
     const userTokens = await dbQuery(
-      `SELECT DISTINCT fcm_token 
-       FROM "users" 
-       WHERE fcm_token IS NOT NULL 
-         AND fcm_token != ''
-         AND COALESCE(notif_result, 1) = 1`
+      `SELECT DISTINCT u.fcm_token 
+       FROM "users" u 
+       WHERE u.fcm_token IS NOT NULL 
+         AND u.fcm_token != ''
+         AND COALESCE(u.notif_result, 1) = 1
+         AND u.fcm_token NOT IN (
+           SELECT fcm_token 
+           FROM "users" 
+           WHERE fcm_token IS NOT NULL 
+             AND fcm_token != '' 
+             AND COALESCE(notif_result, 1) = 0
+         )`
     );
 
     const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
