@@ -292,7 +292,7 @@ exports.register = async (req, res) => {
 
 
 exports.login = async (req, res) => {
-  const { mobile, password } = req.body;
+  const { mobile, password, fcm_token } = req.body;
 
   if (!mobile || !password) {
     return res.json({
@@ -333,6 +333,11 @@ exports.login = async (req, res) => {
         status: false,
         message: "Your Account is Inactive. Contact Admin."
       });
+    }
+
+    // ✅ Sync FCM token if passed in login payload
+    if (fcm_token && fcm_token.length > 10) {
+      dbQuery("UPDATE users SET fcm_token = $1 WHERE id = $2", [fcm_token, user.id]).catch(() => {});
     }
 
     // ✅ Generate JWT Token

@@ -4,6 +4,7 @@ const dbQuery = require("../utils/dbQuery");
 const {
   sendSingleNotification,
   sendMultiNotification,
+  sendBulkNotificationNew,
   sendAll
 } = require("../utils/sendNotification");
 
@@ -167,7 +168,7 @@ exports.sendNotification = async (req, res) => {
        🔔 SEND TO ALL USERS
     ===================================== */
     if (send_all == 1 || user_id === "all" || !user_id || String(user_id).trim() === "" || user_id === "undefined") {
-      console.log("➡️ Routing to ALL USERS topic broadcast...");
+      console.log("➡️ Routing to ALL USERS topic broadcast & direct push...");
       
       // ✅ Save DB
       await dbQuery(
@@ -179,13 +180,27 @@ exports.sendNotification = async (req, res) => {
         [title, body]
       );
 
+      // 1. Topic broadcast (dual 'all_users' and 'all')
       const response = await sendAll(
-        "all",
+        "all_users",
         title,
         body
       );
-
       console.log("✅ Firebase Broadcast Response:", response);
+
+      // 2. Direct push to all registered user device tokens
+      try {
+        const userTokens = await dbQuery(
+          `SELECT DISTINCT fcm_token FROM "users" WHERE fcm_token IS NOT NULL AND fcm_token != ''`
+        );
+        const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
+        if (tokens.length > 0) {
+          await sendBulkNotificationNew(tokens, title, body);
+          console.log(`📲 Admin notification sent directly to ${tokens.length} user tokens`);
+        }
+      } catch (tokErr) {
+        console.error("Direct push error in sendNotification:", tokErr);
+      }
 
     }
 

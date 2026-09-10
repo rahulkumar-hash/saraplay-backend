@@ -102,15 +102,31 @@ const sendBulkNotificationNew = async (tokens, title, body) => {
     const response = await Promise.allSettled(promises);
     let success = 0;
     let failed = 0;
+    const deadTokens = [];
 
-    response.forEach((v) => {
+    response.forEach((v, idx) => {
       if (v.status === "fulfilled") {
         success++;
       } else {
         failed++;
-        console.log(v.reason);
+        const reason = v.reason;
+        const errCode = reason?.code || reason?.errorInfo?.code || "";
+        if (
+          errCode === "messaging/registration-token-not-registered" ||
+          String(reason).includes("NotRegistered")
+        ) {
+          if (tokens[idx]) deadTokens.push(tokens[idx]);
+        }
       }
     });
+
+    if (deadTokens.length > 0) {
+      dbQuery(
+        `UPDATE "users" SET fcm_token = NULL WHERE fcm_token = ANY($1::text[])`,
+        [deadTokens]
+      ).catch((e) => console.error("Clean dead tokens error:", e));
+      console.log(`🧹 Cleaned ${deadTokens.length} dead FCM tokens from users table`);
+    }
 
     console.log("Bulk Success:", success);
     console.log("Bulk Failed:", failed);
@@ -122,41 +138,53 @@ const sendBulkNotificationNew = async (tokens, title, body) => {
 };
 
 /**
- * 📢 Broadcast Topic Notification
+ * 📢 Broadcast Topic Notification (Dual 'all_users' & 'all' topic coverage)
  */
 const sendAll = async (topic, title, body) => {
   try {
-    const message = {
-      topic: topic,
-      notification: {
-        title,
-        body,
-      },
-      data: {
-        title: title || "Royal Group App",
-        body: body || "",
-        target_url: "https://royalmtk.site/"
-      },
-      android: {
-        priority: "high",
-        notification: {
-          channelId: "royal_group_channel",
-          sound: "default",
-          defaultSound: true,
-          defaultVibrateTimings: true
-        }
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: "default",
-          },
-        },
-      },
-    };
+    const topics = (topic === "all" || topic === "all_users" || !topic)
+      ? ["all_users", "all"]
+      : [topic];
 
-    const response = await admin.messaging().send(message);
-    return response;
+    const results = [];
+    for (const t of topics) {
+      try {
+        const message = {
+          topic: t,
+          notification: {
+            title,
+            body,
+          },
+          data: {
+            title: title || "Royal Group App",
+            body: body || "",
+            target_url: "https://royalmtk.site/"
+          },
+          android: {
+            priority: "high",
+            notification: {
+              channelId: "royal_group_channel",
+              sound: "default",
+              defaultSound: true,
+              defaultVibrateTimings: true
+            }
+          },
+          apns: {
+            payload: {
+              aps: {
+                sound: "default",
+              },
+            },
+          },
+        };
+
+        const response = await admin.messaging().send(message);
+        results.push(response);
+      } catch (topicErr) {
+        console.warn(`Topic '${t}' notification error:`, topicErr.message);
+      }
+    }
+    return results;
   } catch (error) {
     console.log("Topic Notification Error:", error);
   }
@@ -165,18 +193,19 @@ const sendAll = async (topic, title, body) => {
 const dbQuery = require("./dbQuery");
 
 /**
- * 📢 Result Notification (Delivered ONLY to users who have result notifications ON in settings)
+ * 📢 Result Notification (Delivered strictly to users who have result notifications ON in settings)
+ * - If user turns OFF result notification in settings (notif_result = 0): They will NOT receive it.
+ * - If user has result notification ON (notif_result = 1): They WILL receive it even if app is closed.
  */
 const sendResultBroadcastNotification = async (title, body) => {
   try {
-    // Direct Push ONLY to users who have explicitly enabled result notifications (notif_result = 1)
+    // Direct Push strictly to users who have NOT disabled result notification (notif_result = 1)
     const userTokens = await dbQuery(
       `SELECT DISTINCT fcm_token 
        FROM "users" 
        WHERE fcm_token IS NOT NULL 
          AND fcm_token != ''
-         AND notif_result::text = '1'
-         AND (notification_status IS NULL OR notification_status = '1' OR notification_status = 'true' OR notification_status = '')`
+         AND COALESCE(notif_result, 1) = 1`
     );
 
     const tokens = userTokens.rows.map((r) => r.fcm_token).filter(Boolean);
