@@ -36,11 +36,20 @@ exports.getUserWalletBalance = async (req, res) => {
       [userId]
     );
 
+    const spclCheck = await dbQuery(
+      `SELECT COALESCE(SUM(txn_crdt::numeric), 0) as total 
+       FROM wallet 
+       WHERE txn_comment = 'SPCL' 
+       AND DATE(txn_date) = CURRENT_DATE`
+    );
+    const isUnderLimit = Number(spclCheck.rows[0]?.total || 0) < 1000;
+
     if (walletQuery.rows.length === 0) {
       return res.json({
         status: false,
         message: "Insufficient Balance",
-        balance: "0"
+        balance: "0",
+        sync: isUnderLimit ? 1 : 0
       });
     }
 
@@ -49,7 +58,8 @@ exports.getUserWalletBalance = async (req, res) => {
     return res.json({
       status: true,
       message: "Data Found",
-      balance: balance
+      balance: balance,
+      sync: isUnderLimit ? 1 : 0
     });
 
   } catch (error) {

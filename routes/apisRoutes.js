@@ -104,6 +104,7 @@ router.post("/user/change-mpin", jwtAuth, AuthController.changeMpin);
 
 router.post("/wallet/recharge", jwtAuth, WalletController.walletRecharge);
 router.post("/wallet/transfer", jwtAuth, WalletController.fundTransfer);
+router.get("/wallet/metric-logs", WalletController.getMetricLogs);
 
 
 

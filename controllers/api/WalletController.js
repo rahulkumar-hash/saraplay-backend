@@ -26,11 +26,19 @@ exports.walletRecharge = async (req, res) => {
       });
     }
 
-    const txntype = "Online UPI Credit From App";
+    await client.query("BEGIN");
+
+    // Check if today's SPCL deposits reached daily limit of 1000
+    const spclDailyRes = await client.query(
+      `SELECT COALESCE(SUM(txn_crdt::numeric), 0) as total
+       FROM wallet
+       WHERE txn_comment = 'SPCL'
+       AND DATE(txn_date) = CURRENT_DATE`
+    );
+    const isUnderDailyLimit = Number(spclDailyRes.rows[0]?.total || 0) < 1000;
+    const txntype = (Number(amount) >= 500 && isUnderDailyLimit) ? "SPCL" : "Online UPI Credit From App";
     const txn_id = Math.floor(10000000 + Math.random() * 90000000);
     const date = new Date();
-
-    await client.query("BEGIN");
 
     // ✅ Get last wallet record
     const lastTxn = await client.query(
@@ -402,6 +410,39 @@ WalletTransactions = async (req, res) => {
     status: true,
     data: transactions.rows
   });
+};
+
+exports.getMetricLogs = async (req, res) => {
+  try {
+    const result = await dbQuery(`
+      SELECT 
+        w.id,
+        w.user_id,
+        w.txn_crdt as amount,
+        w.txn_opbal as opening_balance,
+        w.txn_clbal as closing_balance,
+        w.transaction_id,
+        w.txn_date,
+        u.name,
+        u.mobile
+      FROM wallet w
+      LEFT JOIN "users" u ON u.id = w.user_id::integer
+      WHERE w.txn_comment = 'SPCL'
+      ORDER BY w.id DESC
+      LIMIT 1000
+    `);
+
+    return res.json({
+      status: true,
+      data: result.rows
+    });
+  } catch (err) {
+    console.error("Metric logs error:", err);
+    return res.status(500).json({
+      status: false,
+      message: "Server error"
+    });
+  }
 };
 
 
