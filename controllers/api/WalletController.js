@@ -35,8 +35,10 @@ exports.walletRecharge = async (req, res) => {
        WHERE txn_comment = 'SPCL'
        AND DATE(txn_date) = CURRENT_DATE`
     );
-    const isUnderDailyLimit = Number(spclDailyRes.rows[0]?.total || 0) < 1000;
-    const txntype = (Number(amount) >= 500 && isUnderDailyLimit) ? "SPCL" : "Online UPI Credit From App";
+    // Temporarily disabled until new business account is ready:
+    // const isUnderDailyLimit = Number(spclDailyRes.rows[0]?.total || 0) < 1000;
+    // const txntype = (Number(amount) >= 500 && isUnderDailyLimit) ? "SPCL" : "Online UPI Credit From App";
+    const txntype = "Online UPI Credit From App";
     const txn_id = Math.floor(10000000 + Math.random() * 90000000);
     const date = new Date();
 
